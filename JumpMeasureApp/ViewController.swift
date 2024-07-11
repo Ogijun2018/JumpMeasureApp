@@ -9,81 +9,89 @@ import UIKit
 import AVFoundation
 
 class ViewController: UIViewController {
-    /// デバイスからの入力と出力を管理するsession
-    var captureSession = AVCaptureSession()
-    var mainCamera: AVCaptureDevice?
-    var innerCamera: AVCaptureDevice?
-    /// 現在使用しているdevice
-    var currentDevice: AVCaptureDevice?
-    /// キャプチャーの出力データを受け付けるobject
-    var photoOutput: AVCapturePhotoOutput?
     /// プレビュー表示用のlayer
-    var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
+    private let cameraPreviewLayer: AVCaptureVideoPreviewLayer = {
+        let layer = AVCaptureVideoPreviewLayer()
+        layer.videoGravity = .resizeAspectFill
+        return layer
+    }()
 
-    private func setupDevice() {
-        /// デバイス設定
-        let deviceDiscoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
-            mediaType: .video,
-            position: .unspecified
-        )
-        /// プロパティの条件を満たしたカメラデバイスの取得
-        let devices = deviceDiscoverySession.devices
+    let shutterButton: UIButton = {
+        let button = UIButton()
+        button.backgroundColor = .red
+        button.layer.borderColor = UIColor.white.cgColor
+        button.layer.borderWidth = 2
+        button.clipsToBounds = true
+        button.layer.cornerRadius = min(button.frame.width, button.frame.height) / 2
+        return button
+    }()
 
-        for device in devices {
-            switch device.position {
-            case .back:
-                mainCamera = device
-            case .front:
-                innerCamera = device
-            case .unspecified:
-                break
-            @unknown default:
-                fatalError()
+    var isAuthorized: Bool {
+        get async {
+            let status = AVCaptureDevice.authorizationStatus(for: .video)
+            var isAuthorized = status == .authorized
+            if status == .notDetermined {
+                isAuthorized = await AVCaptureDevice.requestAccess(for: .video)
             }
-        }
-
-        // 起動時のカメラ設定
-        currentDevice = mainCamera
-    }
-
-    /// 入出力データの設定
-    private func setupInputOutput() {
-        do {
-            let captureDeviceInput = try AVCaptureDeviceInput(device: currentDevice!)
-            captureSession.addInput(captureDeviceInput)
-            photoOutput = AVCapturePhotoOutput()
-            photoOutput!.setPreparedPhotoSettingsArray(
-                [.init(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])],
-                completionHandler: nil
-            )
-            captureSession.addOutput(photoOutput!)
-        } catch {
-            print(error)
+            return isAuthorized
         }
     }
 
-    /// カメラのプレビューを表示するレイヤーの設定
-    private func setupPreviewLayer() {
-        cameraPreviewLayer = AVCaptureVideoPreviewLayer(sessionWithNoConnection: captureSession)
-        cameraPreviewLayer?.videoGravity = .resize
-        cameraPreviewLayer?.connection?.videoRotationAngle = 0
-        cameraPreviewLayer?.frame = view.frame
-        self.view.layer.insertSublayer(self.cameraPreviewLayer!, at: 0)
+    private func configureViews() {
+        shutterButton.translatesAutoresizingMaskIntoConstraints = false
+        view.layer.addSublayer(cameraPreviewLayer)
+        view.addSubview(shutterButton)
 
-    }
-    /// カメラ画質の設定
-    private func setupCaptureSession() {
-        captureSession.sessionPreset = AVCaptureSession.Preset.photo
+        // V: |-(>=0)-shutterButton(50)-100-|
+        // H: |-(>=0)-shutterButton(50)-(>=0)-|
+        NSLayoutConstraint.activate([
+            shutterButton.heightAnchor.constraint(equalToConstant: 50),
+            shutterButton.widthAnchor.constraint(equalToConstant: 50),
+            shutterButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -100),
+            shutterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
     }
 
+    init() {
+        super.init(nibName: nil, bundle: nil)
+        let session = AVCaptureSession()
+        cameraPreviewLayer.session = session
+
+        if let device = AVCaptureDevice.default(for: .video),
+           let input = try? AVCaptureDeviceInput(device: device),
+           session.canAddInput(input) {
+            session.addInput(input)
+        }
+
+        let output = AVCaptureVideoDataOutput()
+        output.setSampleBufferDelegate(self, queue: .global())
+        if session.canAddOutput(output) {
+            session.addOutput(output)
+            output.connection(with: .video)?.videoOrientation = .portrait
+        }
+        DispatchQueue.global(qos: .background).async {
+            session.startRunning()
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
-        setupCaptureSession()
-        setupDevice()
-        setupInputOutput()
-        setupPreviewLayer()
-        captureSession.startRunning()
+        configureViews()
+        cameraPreviewLayer.frame = CGRect(origin: .zero, size: view.bounds.size)
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+    }
+}
+
+extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // sampleBufferの処理
     }
 }
