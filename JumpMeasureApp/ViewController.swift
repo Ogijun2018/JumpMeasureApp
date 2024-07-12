@@ -132,19 +132,16 @@ class ViewController: UIViewController {
     }
 
     private func configureMultiCamSessionThree() {
-//        // プレビュー画面を変更する
-//        cameraPreviewView.layer.removeFromSuperlayer()
-//
-//        // multiCamSessionからinputがあればremoveする
-//        if let telephotoCameraSession {
-//            multiCamSession.removeInput(telephotoCameraSession)
-//        }
-//        if let wideCameraSession {
-//            multiCamSession.removeInput(wideCameraSession)
-//        }
-//        if let ultraWideCameraSession {
-//            multiCamSession.removeInput(ultraWideCameraSession)
-//        }
+        // multiCamSessionからinputがあればremoveする
+        if let telephotoCameraSession {
+            multiCamSession.removeInput(telephotoCameraSession)
+        }
+        if let wideCameraSession {
+            multiCamSession.removeInput(wideCameraSession)
+        }
+        if let ultraWideCameraSession {
+            multiCamSession.removeInput(ultraWideCameraSession)
+        }
 
         guard let telephotoCameraSession,
               let wideCameraSession else { return }
@@ -169,25 +166,23 @@ class ViewController: UIViewController {
             y: 0, width: cameraPreviewView.bounds.width / 2,
             height: cameraPreviewView.bounds.height
         )
+        cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
         // addSublayer
         cameraPreviewView.layer.addSublayer(backTelephotoCameraPreviewLayer)
         cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
     }
 
     private func configureMultiCamSessionTwo() {
-//        // プレビュー画面を変更する
-//        cameraPreviewView.layer.removeFromSuperlayer()
-//
-//        // multiCamSessionからinputがあればremoveする
-//        if let telephotoCameraSession {
-//            multiCamSession.removeInput(telephotoCameraSession)
-//        }
-//        if let wideCameraSession {
-//            multiCamSession.removeInput(wideCameraSession)
-//        }
-//        if let ultraWideCameraSession {
-//            multiCamSession.removeInput(ultraWideCameraSession)
-//        }
+        // multiCamSessionからinputがあればremoveする
+        if let telephotoCameraSession {
+            multiCamSession.removeInput(telephotoCameraSession)
+        }
+        if let wideCameraSession {
+            multiCamSession.removeInput(wideCameraSession)
+        }
+        if let ultraWideCameraSession {
+            multiCamSession.removeInput(ultraWideCameraSession)
+        }
 
         guard let ultraWideCameraSession,
               let wideCameraSession else { return }
@@ -211,6 +206,7 @@ class ViewController: UIViewController {
             y: 0, width: cameraPreviewView.bounds.width / 2,
             height: cameraPreviewView.bounds.height
         )
+        cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
         // addSublayer
         cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
         cameraPreviewView.layer.addSublayer(backUltraWideCameraPreviewLayer)
@@ -225,26 +221,27 @@ class ViewController: UIViewController {
                 self.teleWideButton.layer.borderWidth = 2
                 self.wideUltraWideButton.layer.borderWidth = 0
 
-//                Task {
-//                    if await self.isAuthorized {
-//                        self.configureMultiCamSessionTwo()
-//                        self.multiCamSession.startRunning()
-//                    } else {
-//                        print("権限がありません")
-//                    }
-//                }
+                Task {
+                    if await self.isAuthorized {
+                        self.configureMultiCamSessionThree()
+                        self.multiCamSession.startRunning()
+                    } else {
+                        print("権限がありません")
+                    }
+                }
             case .wideUltraWide:
                 // button mode change
                 self.teleWideButton.layer.borderWidth = 0
                 self.wideUltraWideButton.layer.borderWidth = 2
-//                Task {
-//                    if await self.isAuthorized {
-//                        self.configureMultiCamSessionThree()
-//                        self.multiCamSession.startRunning()
-//                    } else {
-//                        print("権限がありません")
-//                    }
-//                }
+                
+                Task {
+                    if await self.isAuthorized {
+                        self.configureMultiCamSessionTwo()
+                        self.multiCamSession.startRunning()
+                    } else {
+                        print("権限がありません")
+                    }
+                }
             }
         }.store(in: &cancellables)
     }
@@ -273,22 +270,13 @@ class ViewController: UIViewController {
             wideCameraSession = input
         }
 
-        Task {
-            if await self.isAuthorized {
-                self.configureMultiCamSessionThree()
-                self.multiCamSession.startRunning()
-            } else {
-                print("権限がありません")
-            }
+        if let ultraWideCamera = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
+           let input = try? AVCaptureDeviceInput(device: ultraWideCamera),
+           multiCamSession.canAddInput(input) {
+            // 超広角カメラ使用可能
+            wideUltraWideButton.isHidden = false
+            ultraWideCameraSession = input
         }
-
-//        if let ultraWideCamera = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
-//           let input = try? AVCaptureDeviceInput(device: ultraWideCamera),
-//           multiCamSession.canAddInput(input) {
-//            // 超広角カメラ使用可能
-//            wideUltraWideButton.isHidden = false
-//            ultraWideCameraSession = input
-//        }
     }
 
     override func didReceiveMemoryWarning() {
