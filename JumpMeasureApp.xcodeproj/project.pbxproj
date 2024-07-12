@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */; };
 		FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */; };
 		FB1B09A62C3ECCBC00FA69E7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */; };
 		FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */; };
@@ -15,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		FB1B09A02C3ECCBC00FA69E7 /* JumpMeasureApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JumpMeasureApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -57,6 +59,7 @@
 				FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */,
 				FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */,
 				FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */,
+				B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */,
 				FB1B09AC2C3ECCBE00FA69E7 /* Assets.xcassets */,
 				FB1B09AE2C3ECCBE00FA69E7 /* LaunchScreen.storyboard */,
 				FB1B09B12C3ECCBE00FA69E7 /* Info.plist */,
@@ -135,6 +138,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */,
+				B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */,
 				FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */,
 				FB1B09A62C3ECCBC00FA69E7 /* SceneDelegate.swift in Sources */,
 			);
@@ -283,12 +287,13 @@
 				DEVELOPMENT_TEAM = VZBG2DMPDR;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JumpMeasureApp/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "To Use Camera";
+				INFOPLIST_KEY_NSCameraUsageDescription = "アプリに表示・使用するための写真や動画を撮影する目的でリクエストします。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "To Use Camera";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "アプリに表示・使用するための写真や動画をライブラリから選択する目的でリクエストします。";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -313,12 +318,13 @@
 				DEVELOPMENT_TEAM = VZBG2DMPDR;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JumpMeasureApp/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "To Use Camera";
+				INFOPLIST_KEY_NSCameraUsageDescription = "アプリに表示・使用するための写真や動画を撮影する目的でリクエストします。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "To Use Camera";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "アプリに表示・使用するための写真や動画をライブラリから選択する目的でリクエストします。";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
