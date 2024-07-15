@@ -142,7 +142,8 @@ class ViewController: UIViewController {
         case .teleWide:
             // メイン映像: 望遠カメラ
             // サブ映像: 広角カメラ
-            guard let wideCameraInput else { return }
+            guard let wideCameraInput,
+                  let telephotoCameraInput else { return }
             // Setting for wideCamera
             multiCamSession.addInput(wideCameraInput)
             settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
@@ -155,7 +156,6 @@ class ViewController: UIViewController {
                 height: subViewHeight
             )
 
-            guard let telephotoCameraInput else { return }
             // Setting for telephotoCamera
             multiCamSession.addInput(telephotoCameraInput)
             settingPreviewLayer(layer: backTelephotoCameraPreviewLayer, session: multiCamSession)
@@ -173,7 +173,8 @@ class ViewController: UIViewController {
         case .wideUltraWide:
             // メイン映像: 広角カメラ
             // サブ映像: 超広角カメラ
-            guard let wideCameraInput else { return }
+            guard let wideCameraInput,
+                  let ultraWideCameraInput else { return }
             // Setting for wideCamera
             multiCamSession.addInput(wideCameraInput)
             settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
@@ -184,7 +185,6 @@ class ViewController: UIViewController {
                 height: cameraPreviewView.bounds.height
             )
 
-            guard let ultraWideCameraInput else { return }
             // Setting for ultraWideCamera
             multiCamSession.addInput(ultraWideCameraInput)
             settingPreviewLayer(layer: backUltraWideCameraPreviewLayer, session: multiCamSession)
