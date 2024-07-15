@@ -40,6 +40,10 @@ class ViewController: UIViewController {
         case wideUltraWide
     }
 
+    enum Const {
+        static let subViewEdgeInset: CGFloat = 20
+    }
+
     @Published var cameraMode: CameraMode = .teleWide
     private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
@@ -132,44 +136,65 @@ class ViewController: UIViewController {
     private func configureCameraSession(mode: CameraMode) {
         let multiCamSession = AVCaptureMultiCamSession()
 
-        guard let wideCameraInput else { return }
-        // Setting for wideCamera
-        multiCamSession.addInput(wideCameraInput)
-        settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
-        backCameraPreviewLayer.frame = CGRect(
-            x: 0,
-            y: 0,
-            width: cameraPreviewView.bounds.width / 2,
-            height: cameraPreviewView.bounds.height
-        )
+        // メインの画面に表示させるカメラ映像は倍率の高い方を採用する
 
         switch mode {
         case .teleWide:
+            // メイン映像: 望遠カメラ
+            // サブ映像: 広角カメラ
+            guard let wideCameraInput else { return }
+            // Setting for wideCamera
+            multiCamSession.addInput(wideCameraInput)
+            settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
+
+            let subViewHeight = cameraPreviewView.bounds.height / 3
+            backCameraPreviewLayer.frame = CGRect(
+                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minX + Const.subViewEdgeInset,
+                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxY - subViewHeight - Const.subViewEdgeInset,
+                width: cameraPreviewView.bounds.width / 4,
+                height: subViewHeight
+            )
+
             guard let telephotoCameraInput else { return }
             // Setting for telephotoCamera
             multiCamSession.addInput(telephotoCameraInput)
             settingPreviewLayer(layer: backTelephotoCameraPreviewLayer, session: multiCamSession)
             backTelephotoCameraPreviewLayer.frame = CGRect(
-                x: cameraPreviewView.bounds.width / 2,
+                x: 0,
                 y: 0,
-                width: cameraPreviewView.bounds.width / 2,
+                width: cameraPreviewView.bounds.width,
                 height: cameraPreviewView.bounds.height
             )
 
             cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
             // addSublayer
-            cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
             cameraPreviewView.layer.addSublayer(backTelephotoCameraPreviewLayer)
+            cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
         case .wideUltraWide:
+            // メイン映像: 広角カメラ
+            // サブ映像: 超広角カメラ
+            guard let wideCameraInput else { return }
+            // Setting for wideCamera
+            multiCamSession.addInput(wideCameraInput)
+            settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
+            backCameraPreviewLayer.frame = CGRect(
+                x: 0,
+                y: 0,
+                width: cameraPreviewView.bounds.width,
+                height: cameraPreviewView.bounds.height
+            )
+
             guard let ultraWideCameraInput else { return }
             // Setting for ultraWideCamera
             multiCamSession.addInput(ultraWideCameraInput)
             settingPreviewLayer(layer: backUltraWideCameraPreviewLayer, session: multiCamSession)
+
+            let subViewHeight = cameraPreviewView.bounds.height / 3
             backUltraWideCameraPreviewLayer.frame = CGRect(
-                x: cameraPreviewView.bounds.width / 2,
-                y: 0,
-                width: cameraPreviewView.bounds.width / 2,
-                height: cameraPreviewView.bounds.height
+                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minX + Const.subViewEdgeInset,
+                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxY - subViewHeight - Const.subViewEdgeInset,
+                width: cameraPreviewView.bounds.width / 4,
+                height: subViewHeight
             )
 
             cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
