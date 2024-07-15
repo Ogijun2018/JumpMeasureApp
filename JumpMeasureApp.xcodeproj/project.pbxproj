@@ -288,7 +288,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JumpMeasureApp/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "アプリに表示・使用するための写真や動画を撮影する目的でリクエストします。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "To Use Camera";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "アプリに表示・使用するための写真や動画をライブラリから選択する目的でリクエストします。";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -319,7 +318,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JumpMeasureApp/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "アプリに表示・使用するための写真や動画を撮影する目的でリクエストします。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "To Use Camera";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "アプリに表示・使用するための写真や動画をライブラリから選択する目的でリクエストします。";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;

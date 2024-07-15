@@ -19,11 +19,39 @@ class ViewController: UIViewController {
     private var wideCameraInput: AVCaptureDeviceInput?
     private var ultraWideCameraInput: AVCaptureDeviceInput?
 
+    // output
+    private var telephotoCameraOutput: AVCapturePhotoOutput?
+    private var wideCameraOutput: AVCapturePhotoOutput?
+    private var ultraWideCameraOutput: AVCapturePhotoOutput?
+
     private let cameraPreviewView = UIView()
+
+    private let loadingIndicatorView: UIActivityIndicatorView = {
+        let loading = UIActivityIndicatorView()
+        loading.style = .large
+        loading.color = .white
+
+        return loading
+    }()
+    private let loadingBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .lightGray
+        return view
+    }()
 
     let shutterButton: UIButton = {
         let button = UIButton()
-        button.backgroundColor = .white
+
+        var config = UIButton.Configuration.filled()
+        config.baseForegroundColor = .white
+        config.baseBackgroundColor = .white
+        config.background.backgroundInsets = .init(top: 7, leading: 7, bottom: 7, trailing: 7)
+
+        config.cornerStyle = .capsule
+        button.configuration = config
+        button.layer.borderColor = UIColor.white.cgColor
+        button.layer.borderWidth = 4
+
         return button
     }()
     let shutterButtonSize = CGFloat(80)
@@ -74,16 +102,20 @@ class ViewController: UIViewController {
         }
     }
 
+    @Published var isLoading: Bool = true
+
     private func configureViews() {
-        [cameraPreviewView, shutterButton, stackView].forEach {
+        [cameraPreviewView,
+         shutterButton,
+         stackView,
+         loadingBackgroundView,
+         loadingIndicatorView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
         stackView.addArrangedSubview(teleWideButton)
         stackView.addArrangedSubview(wideUltraWideButton)
-        shutterButton.layer.masksToBounds = true
-        shutterButton.layer.cornerRadius = shutterButtonSize / 2
-        
+
         // teleWideButton config
         teleWideButton.isHidden = true
         teleWideButton.addAction(.init { [weak self] _ in
@@ -96,31 +128,38 @@ class ViewController: UIViewController {
             self?.cameraMode = .wideUltraWide
         }, for: .touchUpInside)
 
-        // V: |[cameraPreviewView]|
-        // H: |[cameraPreviewView]|
-        NSLayoutConstraint.activate([
-            cameraPreviewView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            cameraPreviewView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            cameraPreviewView.topAnchor.constraint(equalTo: view.topAnchor),
-            cameraPreviewView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        [cameraPreviewView, 
+         loadingBackgroundView,
+         loadingIndicatorView].forEach {
+            NSLayoutConstraint.activate([
+                $0.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                $0.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                $0.topAnchor.constraint(equalTo: view.topAnchor),
+                $0.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
+        }
 
         // V: |-(>=0)-shutterButton(50)-100-|
         // H: |-(>=0)-shutterButton(50)-(>=0)-|
         NSLayoutConstraint.activate([
             shutterButton.heightAnchor.constraint(equalToConstant: shutterButtonSize),
             shutterButton.widthAnchor.constraint(equalToConstant: shutterButtonSize),
-            shutterButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            shutterButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -80),
+            shutterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            shutterButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 50)
         ])
+
+        shutterButton.addAction(.init { [weak self] _ in
+            self?.shutterButtonTapped()
+        }, for: .touchUpInside)
     }
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         teleWideButton.layer.cornerRadius = teleWideButton.frame.height / 2
         wideUltraWideButton.layer.cornerRadius = wideUltraWideButton.frame.height / 2
+        shutterButton.layer.cornerRadius = shutterButton.frame.height / 2
     }
 
     private var cancellables: [AnyCancellable] = []
@@ -133,6 +172,20 @@ class ViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    private func shutterButtonTapped() {
+        // 静止画として現在の映像を保存する
+        let settings = AVCapturePhotoSettings()
+        // 各モードに合わせたoutputからcaptureを行う
+        switch cameraMode {
+        case .teleWide:
+            telephotoCameraOutput?.capturePhoto(with: settings, delegate: self)
+            wideCameraOutput?.capturePhoto(with: settings, delegate: self)
+        case .wideUltraWide:
+            ultraWideCameraOutput?.capturePhoto(with: settings, delegate: self)
+            wideCameraOutput?.capturePhoto(with: settings, delegate: self)
+        }
+    }
+
     private func configureCameraSession(mode: CameraMode) {
         let multiCamSession = AVCaptureMultiCamSession()
 
@@ -143,21 +196,26 @@ class ViewController: UIViewController {
             // メイン映像: 望遠カメラ
             // サブ映像: 広角カメラ
             guard let wideCameraInput,
-                  let telephotoCameraInput else { return }
+                  let wideCameraOutput,
+                  let telephotoCameraInput,
+                  let telephotoCameraOutput else { return }
             // Setting for wideCamera
             multiCamSession.addInput(wideCameraInput)
+            multiCamSession.addOutput(wideCameraOutput)
             settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
 
+            let subViewWidth = cameraPreviewView.bounds.width / 4
             let subViewHeight = cameraPreviewView.bounds.height / 3
             backCameraPreviewLayer.frame = CGRect(
-                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minX + Const.subViewEdgeInset,
-                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxY - subViewHeight - Const.subViewEdgeInset,
-                width: cameraPreviewView.bounds.width / 4,
+                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxX - subViewWidth - Const.subViewEdgeInset,
+                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minY + Const.subViewEdgeInset,
+                width: subViewWidth,
                 height: subViewHeight
             )
 
             // Setting for telephotoCamera
             multiCamSession.addInput(telephotoCameraInput)
+            multiCamSession.addOutput(telephotoCameraOutput)
             settingPreviewLayer(layer: backTelephotoCameraPreviewLayer, session: multiCamSession)
             backTelephotoCameraPreviewLayer.frame = CGRect(
                 x: 0,
@@ -165,6 +223,11 @@ class ViewController: UIViewController {
                 width: cameraPreviewView.bounds.width,
                 height: cameraPreviewView.bounds.height
             )
+
+            backTelephotoCameraPreviewLayer.opacity = 1.0
+            backCameraPreviewLayer.opacity = 0.5
+            backTelephotoCameraPreviewLayer.cornerRadius = 0
+            backCameraPreviewLayer.cornerRadius = 10
 
             cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
             // addSublayer
@@ -174,9 +237,12 @@ class ViewController: UIViewController {
             // メイン映像: 広角カメラ
             // サブ映像: 超広角カメラ
             guard let wideCameraInput,
-                  let ultraWideCameraInput else { return }
+                  let wideCameraOutput,
+                  let ultraWideCameraInput,
+                  let ultraWideCameraOutput else { return }
             // Setting for wideCamera
             multiCamSession.addInput(wideCameraInput)
+            multiCamSession.addOutput(wideCameraOutput)
             settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
             backCameraPreviewLayer.frame = CGRect(
                 x: 0,
@@ -187,15 +253,22 @@ class ViewController: UIViewController {
 
             // Setting for ultraWideCamera
             multiCamSession.addInput(ultraWideCameraInput)
+            multiCamSession.addOutput(ultraWideCameraOutput)
             settingPreviewLayer(layer: backUltraWideCameraPreviewLayer, session: multiCamSession)
 
+            let subViewWidth = cameraPreviewView.bounds.width / 4
             let subViewHeight = cameraPreviewView.bounds.height / 3
             backUltraWideCameraPreviewLayer.frame = CGRect(
-                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minX + Const.subViewEdgeInset,
-                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxY - subViewHeight - Const.subViewEdgeInset,
-                width: cameraPreviewView.bounds.width / 4,
+                x: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.maxX - subViewWidth - Const.subViewEdgeInset,
+                y: cameraPreviewView.safeAreaLayoutGuide.layoutFrame.minY + Const.subViewEdgeInset,
+                width: subViewWidth,
                 height: subViewHeight
             )
+            
+            backCameraPreviewLayer.opacity = 1.0
+            backUltraWideCameraPreviewLayer.opacity = 0.5
+            backCameraPreviewLayer.cornerRadius = 0
+            backUltraWideCameraPreviewLayer.cornerRadius = 10
 
             cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
             // addSublayer
@@ -226,21 +299,51 @@ class ViewController: UIViewController {
                 self.wideUltraWideButton.layer.borderWidth = 2
             }
             Task {
+                self.startLoading()
+                try await self.sleepTask()
                 if await self.isAuthorized {
                     self.configureMultiCamSession()
                     self.configureCameraSession(mode: mode)
                 } else {
                     print("権限がありません")
                 }
+                try await self.sleepTask()
+                self.stopLoading()
             }
         }.store(in: &cancellables)
+    }
+
+    func sleepTask() async throws {
+        do {
+            try await Task.sleep(nanoseconds: 500_000_000) // wait for 0.5s
+        } catch {
+            print(error.localizedDescription)
+        }
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         configureViews()
+        startLoading()
         bind()
+        stopLoading()
+    }
+
+    private func startLoading() {
+        loadingIndicatorView.startAnimating()
+        loadingBackgroundView.alpha = 0.0
+        UIView.animate(withDuration: 0.2) {
+            self.loadingBackgroundView.alpha = 1.0
+        }
+    }
+
+    private func stopLoading() {
+        loadingIndicatorView.stopAnimating()
+        loadingBackgroundView.alpha = 1.0
+        UIView.animate(withDuration: 0.2) {
+            self.loadingBackgroundView.alpha = 0.0
+        }
     }
 
     private func configureMultiCamSession() {
@@ -249,11 +352,15 @@ class ViewController: UIViewController {
             // 望遠カメラ使用可能
             teleWideButton.isHidden = false
             telephotoCameraInput = input
+            // 出力設定
+            telephotoCameraOutput = AVCapturePhotoOutput()
         }
 
         if let wideCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
            let input = try? AVCaptureDeviceInput(device: wideCamera) {
             wideCameraInput = input
+            // 出力設定
+            wideCameraOutput = AVCapturePhotoOutput()
         }
 
         if let ultraWideCamera = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
@@ -261,6 +368,8 @@ class ViewController: UIViewController {
             // 超広角カメラ使用可能
             wideUltraWideButton.isHidden = false
             ultraWideCameraInput = input
+            // 出力設定
+            ultraWideCameraOutput = AVCapturePhotoOutput()
         }
     }
 
@@ -272,5 +381,34 @@ class ViewController: UIViewController {
 extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         // sampleBufferの処理
+    }
+}
+
+extension ViewController: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard let imageData = photo.fileDataRepresentation() else { return }
+        let image = UIImage(data: imageData)
+
+        // Outputに応じた処理を行う
+        if output == telephotoCameraOutput {
+            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
+        } else if output == wideCameraOutput {
+            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
+        } else if output == ultraWideCameraOutput {
+            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
+        }
+    }
+
+    private func saveImageToPhotosAlbum(_ image: UIImage?, completionTarget: Any?, completionSelector: Selector?) {
+        guard let image else { return }
+        UIImageWriteToSavedPhotosAlbum(image, completionTarget, completionSelector, nil)
+    }
+
+    @objc private func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        if let error = error {
+            print("Error saving image: \(error.localizedDescription)")
+        } else {
+            print("Successfully saved image to Photos album")
+        }
     }
 }
