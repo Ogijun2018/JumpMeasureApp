@@ -13,10 +13,8 @@ class ViewController: UIViewController {
     private let backTelephotoCameraPreviewLayer = AVCaptureVideoPreviewLayer()
     private let backCameraPreviewLayer = AVCaptureVideoPreviewLayer()
     private let backUltraWideCameraPreviewLayer = AVCaptureVideoPreviewLayer()
-    private let back = AVCaptureVideoPreviewLayer()
-    /// 複数カメラ用のセッション
-    private var multiCamSession: AVCaptureMultiCamSession?
 
+    // MEMO: 現在、Inputは1つのインスタンスを使い回さず、configureMultiCamSession()で毎回更新している
     private var telephotoCameraInput: AVCaptureDeviceInput?
     private var wideCameraInput: AVCaptureDeviceInput?
     private var ultraWideCameraInput: AVCaptureDeviceInput?
@@ -43,7 +41,7 @@ class ViewController: UIViewController {
     }
 
     @Published var cameraMode: CameraMode = .teleWide
-    private lazy var teleWideButton: UIButton = makeButton(title: "Telephoto / Wide")
+    private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
 
     func makeButton(title: String) -> UIButton {
@@ -69,12 +67,6 @@ class ViewController: UIViewController {
                 isAuthorized = await AVCaptureDevice.requestAccess(for: .video)
             }
             return isAuthorized
-        }
-    }
-
-    private func removeAllInputs(from session: AVCaptureMultiCamSession) {
-        for input in session.inputs {
-            session.removeInput(input)
         }
     }
 
@@ -137,29 +129,13 @@ class ViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func configureTelephotoCameraSession() {
-        multiCamSession = AVCaptureMultiCamSession()
-        // |[backCameraPreviewLayer][backTelephotoCameraPreviewLayer]|
-        
-        guard let multiCamSession else { return }
-        if multiCamSession.isRunning {
-            multiCamSession.stopRunning()
-        }
-        // multiCamSessionからinputがあればremoveする
-        removeAllInputs(from: multiCamSession)
+    private func configureCameraSession(mode: CameraMode) {
+        let multiCamSession = AVCaptureMultiCamSession()
 
-        guard let telephotoCameraInput,
-              let wideCameraInput else { return }
-
-        if multiCamSession.canAddInput(telephotoCameraInput) {
-            print("session追加可能！")
-        }
-
+        guard let wideCameraInput else { return }
         // Setting for wideCamera
         multiCamSession.addInput(wideCameraInput)
-        backCameraPreviewLayer.session = multiCamSession
-        backCameraPreviewLayer.connection?.videoRotationAngle = 0
-        backCameraPreviewLayer.videoGravity = .resizeAspectFill
+        settingPreviewLayer(layer: backCameraPreviewLayer, session: multiCamSession)
         backCameraPreviewLayer.frame = CGRect(
             x: 0,
             y: 0,
@@ -167,68 +143,48 @@ class ViewController: UIViewController {
             height: cameraPreviewView.bounds.height
         )
 
-        // Setting for telephotoCamera
-        multiCamSession.addInput(telephotoCameraInput)
-        backTelephotoCameraPreviewLayer.session = multiCamSession
-        backTelephotoCameraPreviewLayer.connection?.videoRotationAngle = 0
-        backTelephotoCameraPreviewLayer.videoGravity = .resizeAspectFill
-        backTelephotoCameraPreviewLayer.frame = CGRect(
-            x: cameraPreviewView.bounds.width / 2,
-            y: 0,
-            width: cameraPreviewView.bounds.width / 2,
-            height: cameraPreviewView.bounds.height
-        )
-        cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        // addSublayer
-        cameraPreviewView.layer.addSublayer(backTelephotoCameraPreviewLayer)
-        cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
+        switch mode {
+        case .teleWide:
+            guard let telephotoCameraInput else { return }
+            // Setting for telephotoCamera
+            multiCamSession.addInput(telephotoCameraInput)
+            settingPreviewLayer(layer: backTelephotoCameraPreviewLayer, session: multiCamSession)
+            backTelephotoCameraPreviewLayer.frame = CGRect(
+                x: cameraPreviewView.bounds.width / 2,
+                y: 0,
+                width: cameraPreviewView.bounds.width / 2,
+                height: cameraPreviewView.bounds.height
+            )
+
+            cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+            // addSublayer
+            cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
+            cameraPreviewView.layer.addSublayer(backTelephotoCameraPreviewLayer)
+        case .wideUltraWide:
+            guard let ultraWideCameraInput else { return }
+            // Setting for ultraWideCamera
+            multiCamSession.addInput(ultraWideCameraInput)
+            settingPreviewLayer(layer: backUltraWideCameraPreviewLayer, session: multiCamSession)
+            backUltraWideCameraPreviewLayer.frame = CGRect(
+                x: cameraPreviewView.bounds.width / 2,
+                y: 0,
+                width: cameraPreviewView.bounds.width / 2,
+                height: cameraPreviewView.bounds.height
+            )
+
+            cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+            // addSublayer
+            cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
+            cameraPreviewView.layer.addSublayer(backUltraWideCameraPreviewLayer)
+        }
+
+        multiCamSession.startRunning()
     }
 
-    private func configureUltraWideCameraSession() {
-        multiCamSession = AVCaptureMultiCamSession()
-        // |[backCameraPreviewLayer][backUltraWideCameraPreviewLayer]|
-
-        guard let multiCamSession else { return }
-        if multiCamSession.isRunning {
-            multiCamSession.stopRunning()
-        }
-        // multiCamSessionからinputがあればremoveする
-        removeAllInputs(from: multiCamSession)
-
-        guard let ultraWideCameraInput,
-              let wideCameraInput else { return }
-
-        // Setting for wideCamera
-        if multiCamSession.canAddInput(wideCameraInput) {
-            multiCamSession.addInput(wideCameraInput)
-        }
-        backCameraPreviewLayer.session = multiCamSession
-        backCameraPreviewLayer.connection?.videoRotationAngle = 0
-        backCameraPreviewLayer.videoGravity = .resizeAspectFill
-        backCameraPreviewLayer.frame = CGRect(
-            x: 0,
-            y: 0,
-            width: cameraPreviewView.bounds.width / 2,
-            height: cameraPreviewView.bounds.height
-        )
-
-        // Setting for ultraWideCamera
-        if multiCamSession.canAddInput(ultraWideCameraInput) {
-            multiCamSession.addInput(ultraWideCameraInput)
-        }
-        backUltraWideCameraPreviewLayer.session = multiCamSession
-        backUltraWideCameraPreviewLayer.connection?.videoRotationAngle = 0
-        backUltraWideCameraPreviewLayer.videoGravity = .resizeAspectFill
-        backUltraWideCameraPreviewLayer.frame = CGRect(
-            x: cameraPreviewView.bounds.width / 2,
-            y: 0, 
-            width: cameraPreviewView.bounds.width / 2,
-            height: cameraPreviewView.bounds.height
-        )
-        cameraPreviewView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        // addSublayer
-        cameraPreviewView.layer.addSublayer(backCameraPreviewLayer)
-        cameraPreviewView.layer.addSublayer(backUltraWideCameraPreviewLayer)
+    private func settingPreviewLayer(layer: AVCaptureVideoPreviewLayer, session: AVCaptureSession) {
+        layer.session = session
+        layer.connection?.videoRotationAngle = 0
+        layer.videoGravity = .resizeAspectFill
     }
 
     private func bind() {
@@ -239,27 +195,17 @@ class ViewController: UIViewController {
                 // button mode change
                 self.teleWideButton.layer.borderWidth = 2
                 self.wideUltraWideButton.layer.borderWidth = 0
-
-                Task {
-                    if await self.isAuthorized {
-                        self.configureTelephotoCameraSession()
-                        self.multiCamSession?.startRunning()
-                    } else {
-                        print("権限がありません")
-                    }
-                }
             case .wideUltraWide:
                 // button mode change
                 self.teleWideButton.layer.borderWidth = 0
                 self.wideUltraWideButton.layer.borderWidth = 2
-                
-                Task {
-                    if await self.isAuthorized {
-                        self.configureUltraWideCameraSession()
-                        self.multiCamSession?.startRunning()
-                    } else {
-                        print("権限がありません")
-                    }
+            }
+            Task {
+                if await self.isAuthorized {
+                    self.configureMultiCamSession()
+                    self.configureCameraSession(mode: mode)
+                } else {
+                    print("権限がありません")
                 }
             }
         }.store(in: &cancellables)
@@ -269,7 +215,6 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         configureViews()
-        configureMultiCamSession()
         bind()
     }
 
