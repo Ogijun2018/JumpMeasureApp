@@ -76,6 +76,8 @@ class ViewController: UIViewController {
     private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
 
+    @Published var tempImages: [UIImage] = []
+
     func makeButton(title: String) -> UIButton {
         let button = UIButton()
         var config = UIButton.Configuration.filled()
@@ -311,6 +313,21 @@ class ViewController: UIViewController {
                 self.stopLoading()
             }
         }.store(in: &cancellables)
+
+        $tempImages.sink { [weak self] images in
+            guard let self, images.count >= 2 else { return }
+            switch cameraMode {
+                // それぞれのmodeのoutputが2つ揃った時点でモーダルを表示させる
+            case .teleWide:
+                guard self.telephotoCameraOutput != nil,
+                      self.wideCameraOutput != nil else { return }
+                showPhotoPreviewModal(images: images)
+            case .wideUltraWide:
+                guard self.ultraWideCameraOutput != nil,
+                      self.wideCameraOutput != nil else { return }
+                showPhotoPreviewModal(images: images)
+            }
+        }.store(in: &cancellables)
     }
 
     func sleepTask() async throws {
@@ -386,22 +403,31 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 extension ViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let imageData = photo.fileDataRepresentation() else { return }
-        let image = UIImage(data: imageData)
-
-        // Outputに応じた処理を行う
-        if output == telephotoCameraOutput {
-            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
-        } else if output == wideCameraOutput {
-            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
-        } else if output == ultraWideCameraOutput {
-            saveImageToPhotosAlbum(image, completionTarget: self, completionSelector: #selector(image(_:didFinishSavingWithError:contextInfo:)))
-        }
+        guard let imageData = photo.fileDataRepresentation(),
+              let image = UIImage(data: imageData),
+              let hoge = image.rotate(radians: .pi / -2) else { return }
+        tempImages.append(hoge)
     }
 
-    private func saveImageToPhotosAlbum(_ image: UIImage?, completionTarget: Any?, completionSelector: Selector?) {
-        guard let image else { return }
-        UIImageWriteToSavedPhotosAlbum(image, completionTarget, completionSelector, nil)
+    private func showPhotoPreviewModal(images: [UIImage]) {
+        let vc = ModalViewController(images: images, didTapConfirm: {
+            print("hoge")
+        })
+        if let sheet = vc.sheetPresentationController {
+            sheet.detents = [.large()]
+            sheet.prefersEdgeAttachedInCompactHeight = true
+        }
+        present(vc, animated: true, completion: {  [weak self] in
+            // MEMO:
+            // tempImagesは撮影のタイミングで2回appendされ、tempImageが2枚になったときにモーダルを表示する
+            // sink内でtempImagesを削除すると、2回目のappendはguardによって発動せずtempImagesに1枚の画像が残ってしまう
+            // モーダルのcompletionでtempImagesを初期化することで確実に一回の撮影ごとにtempImagesを削除している
+            self?.tempImages = []
+        })
+    }
+
+    private func saveImageToPhotosAlbum(_ image: UIImage) {
+        UIImageWriteToSavedPhotosAlbum(image, self, #selector(image(_:didFinishSavingWithError:contextInfo:)), nil)
     }
 
     @objc private func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {

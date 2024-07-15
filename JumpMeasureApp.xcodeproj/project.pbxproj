@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */; };
+		B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86822C45173800E0DFF1 /* ModalViewController.swift */; };
+		B87C86852C451DF000E0DFF1 /* UIImage+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */; };
 		FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */; };
 		FB1B09A62C3ECCBC00FA69E7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */; };
 		FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */; };
@@ -17,6 +19,8 @@
 
 /* Begin PBXFileReference section */
 		B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
+		B87C86822C45173800E0DFF1 /* ModalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalViewController.swift; sourceTree = "<group>"; };
+		B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Utils.swift"; sourceTree = "<group>"; };
 		FB1B09A02C3ECCBC00FA69E7 /* JumpMeasureApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JumpMeasureApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -59,6 +63,8 @@
 				FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */,
 				FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */,
 				FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */,
+				B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */,
+				B87C86822C45173800E0DFF1 /* ModalViewController.swift */,
 				B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */,
 				FB1B09AC2C3ECCBE00FA69E7 /* Assets.xcassets */,
 				FB1B09AE2C3ECCBE00FA69E7 /* LaunchScreen.storyboard */,
@@ -138,9 +144,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */,
+				B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */,
 				B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */,
 				FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */,
 				FB1B09A62C3ECCBC00FA69E7 /* SceneDelegate.swift in Sources */,
+				B87C86852C451DF000E0DFF1 /* UIImage+Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
