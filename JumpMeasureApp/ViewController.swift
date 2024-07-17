@@ -416,60 +416,66 @@ class ViewController: UIViewController {
 
 extension ViewController {
 
-    enum LensType {
-        case wide
-        case ultraWide
-        case telephoto
-    }
-
-    private func getExifDict(from image: CIImage) -> [String: Any]? {
-        return image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any]
-    }
-
-//    private func getLensType(from image: CIImage) -> LensType? {
-//        let exifDict = getExifDict(from: image)
-//        guard let lensModel = exifDict[kCGImagePropertyExifLensModel as String] as? [String: Any] else { return nil }
-//        if lensModel.contains("Ultra Wide") {
-//            return .ultraWide
-//        } else if lensModel.contains("Telephoto") {
-//            return .telephoto
-//        } else if lensModel.contains("Wide") {
-//            return .wide
-//        }
-//        return nil
-//    }
-
-    /// EXIFデータから焦点距離を取得する
+    /// EXIFデータから35mm換算の焦点距離を取得
     private func getFocalLength(from image: CIImage) -> CGFloat? {
-        guard let exifDict = getExifDict(from: image),
+        guard let exifDict = image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
               let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
         else { return nil }
         return focalLength
     }
 
-    private func scaleImage(image: CIImage, by factor: CGFloat) -> UIImage? {
-        guard let uiImage = image.toUIImage(orientation: .up) else { return nil }
-        let size = CGSize(width: uiImage.size.width * factor, height: uiImage.size.height * factor)
-        UIGraphicsBeginImageContextWithOptions(size, false, uiImage.scale)
-        uiImage.draw(in: .init(origin: .zero, size: size))
-        let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return scaledImage
+    private func trimmingImage(_ image: UIImage, trimmingArea: CGRect) -> UIImage? {
+        guard let imgRef = image.cgImage?.cropping(to: trimmingArea) else {
+            return nil
+        }
+        return .init(cgImage: imgRef,
+                     scale: image.scale,
+                     orientation: image.imageOrientation)
     }
 
-    // 広角・望遠の二つの画像を同じ倍率に変更する
+    // 二つの焦点距離の異なる画像を同じ倍率に変更する
     private func adjustImagesToSameScale(firstImage: CIImage, secondImage: CIImage) -> (UIImage?, UIImage?) {
         guard let firstFocalLength = getFocalLength(from: firstImage),
               let secondFocalLength = getFocalLength(from: secondImage) else {
             return (nil, nil)
         }
+        guard let firstUIImage = firstImage.toUIImage(orientation: .up),
+              let secondUIImage = secondImage.toUIImage(orientation: .up) else {
+            return (nil, nil)
+        }
+        // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
+        if firstFocalLength > secondFocalLength {
+            // 1枚目が2枚目よりも大きい場合
+            let scaleFactor = firstFocalLength / secondFocalLength
 
-        let scaleFactor = firstFocalLength / secondFocalLength
+            let trimmingArea = CGRect(
+                x: secondUIImage.centerX - secondUIImage.centerX / scaleFactor,
+                y: secondUIImage.centerY - secondUIImage.centerY / scaleFactor,
+                width: secondUIImage.size.width / scaleFactor,
+                height: secondUIImage.size.height / scaleFactor
+            )
+            guard let scaledSecondImage = trimmingImage(secondUIImage, trimmingArea: trimmingArea) else {
+                // error
+                return (firstUIImage, secondUIImage)
+            }
+            return (firstUIImage, scaledSecondImage)
+        } else if firstFocalLength < secondFocalLength {
+            // 2枚目が1枚目よりも大きい場合
+            let scaleFactor = secondFocalLength / firstFocalLength
 
-        let scaledFirstImage = scaleImage(image: firstImage, by: 1 / scaleFactor)
-        let scaledSecondImage = scaleImage(image: secondImage, by: scaleFactor)
-
-        return (scaledFirstImage, scaledSecondImage)
+            let trimmingArea = CGRect(
+                x: firstUIImage.centerX - firstUIImage.centerX / scaleFactor,
+                y: firstUIImage.centerY - firstUIImage.centerY / scaleFactor,
+                width: firstUIImage.size.width / scaleFactor,
+                height: firstUIImage.size.height / scaleFactor
+            )
+            guard let scaledFirstImage = trimmingImage(firstUIImage, trimmingArea: trimmingArea) else {
+                return (firstUIImage, secondUIImage)
+            }
+            return (scaledFirstImage, secondUIImage)
+        } else {
+            return (nil, nil)
+        }
     }
 }
 

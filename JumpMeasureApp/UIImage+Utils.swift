@@ -8,6 +8,14 @@
 import UIKit
 
 extension UIImage {
+
+    var centerX: CGFloat {
+        return self.size.width / 2
+    }
+    var centerY: CGFloat {
+        return self.size.height / 2
+    }
+
     func rotate(radians: Float) -> UIImage? {
         var newSize = CGRect(origin: CGPoint.zero, size: self.size).applying(CGAffineTransform(rotationAngle: CGFloat(radians))).size
         // Trim off the extremely small float value to prevent core graphics from rounding it up
@@ -32,13 +40,9 @@ extension UIImage {
 }
 
 extension CIImage {
-    func toCGImage() -> CGImage? {
-        let context = { CIContext(options: nil) }()
-        return context.createCGImage(self, from: self.extent)
-    }
-
     func toUIImage(orientation: UIImage.Orientation) -> UIImage? {
-        guard let cgImage = self.toCGImage() else { return nil }
-        return UIImage(cgImage: cgImage, scale: 1.0, orientation: orientation)
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(self, from: self.extent) else { return nil }
+        return .init(cgImage: cgImage, scale: 1.0, orientation: orientation)
     }
 }
