@@ -6,7 +6,7 @@
 //
 
 import UIKit
-/// UISheetPresentationController に載せたい ViewController
+
 final class ModalViewController: UIViewController {
 
     private var didTapConfirm: (() -> Void)?

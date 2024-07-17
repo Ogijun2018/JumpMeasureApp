@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B80337B22C47361000ED9550 /* MeasureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B80337B12C47361000ED9550 /* MeasureViewController.swift */; };
 		B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */; };
 		B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86822C45173800E0DFF1 /* ModalViewController.swift */; };
 		B87C86852C451DF000E0DFF1 /* UIImage+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */; };
@@ -18,6 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B80337B12C47361000ED9550 /* MeasureViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasureViewController.swift; sourceTree = "<group>"; };
 		B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		B87C86822C45173800E0DFF1 /* ModalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalViewController.swift; sourceTree = "<group>"; };
 		B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Utils.swift"; sourceTree = "<group>"; };
@@ -63,6 +65,7 @@
 				FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */,
 				FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */,
 				FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */,
+				B80337B12C47361000ED9550 /* MeasureViewController.swift */,
 				B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */,
 				B87C86822C45173800E0DFF1 /* ModalViewController.swift */,
 				B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */,
@@ -143,6 +146,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B80337B22C47361000ED9550 /* MeasureViewController.swift in Sources */,
 				FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */,
 				B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */,
 				B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */,

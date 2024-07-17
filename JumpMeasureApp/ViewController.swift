@@ -8,6 +8,7 @@
 import UIKit
 import AVFoundation
 import Combine
+import MobileCoreServices
 
 class ViewController: UIViewController {
     private let backTelephotoCameraPreviewLayer = AVCaptureVideoPreviewLayer()
@@ -76,7 +77,7 @@ class ViewController: UIViewController {
     private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
 
-    @Published var tempImages: [UIImage] = []
+    @Published var tempImages: [(UIImage, CIImage)] = []
 
     func makeButton(title: String) -> UIButton {
         let button = UIButton()
@@ -321,11 +322,29 @@ class ViewController: UIViewController {
             case .teleWide:
                 guard self.telephotoCameraOutput != nil,
                       self.wideCameraOutput != nil else { return }
-                showPhotoPreviewModal(images: images)
+                
+                // (UIImage?, UIImage?)
+                let adjustedImages = adjustImagesToSameScale(
+                    firstImage: images[0].1,
+                    secondImage: images[1].1
+                )
+                guard let imageOne = adjustedImages.0,
+                      let imageTwo = adjustedImages.1 else { return }
+                // 2つの画像を同じ倍率に変更する
+                showPhotoPreviewModal(images: [imageOne, imageTwo])
             case .wideUltraWide:
                 guard self.ultraWideCameraOutput != nil,
                       self.wideCameraOutput != nil else { return }
-                showPhotoPreviewModal(images: images)
+
+                // (UIImage?, UIImage?)
+                let adjustedImages = adjustImagesToSameScale(
+                    firstImage: images[0].1,
+                    secondImage: images[1].1
+                )
+                guard let imageOne = adjustedImages.0,
+                      let imageTwo = adjustedImages.1 else { return }
+                // 2つの画像を同じ倍率に変更する
+                showPhotoPreviewModal(images: [imageOne, imageTwo])
             }
         }.store(in: &cancellables)
     }
@@ -395,6 +414,65 @@ class ViewController: UIViewController {
     }
 }
 
+extension ViewController {
+
+    enum LensType {
+        case wide
+        case ultraWide
+        case telephoto
+    }
+
+    private func getExifDict(from image: CIImage) -> [String: Any]? {
+        return image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any]
+    }
+
+//    private func getLensType(from image: CIImage) -> LensType? {
+//        let exifDict = getExifDict(from: image)
+//        guard let lensModel = exifDict[kCGImagePropertyExifLensModel as String] as? [String: Any] else { return nil }
+//        if lensModel.contains("Ultra Wide") {
+//            return .ultraWide
+//        } else if lensModel.contains("Telephoto") {
+//            return .telephoto
+//        } else if lensModel.contains("Wide") {
+//            return .wide
+//        }
+//        return nil
+//    }
+
+    /// EXIFデータから焦点距離を取得する
+    private func getFocalLength(from image: CIImage) -> CGFloat? {
+        guard let exifDict = getExifDict(from: image),
+              let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
+        else { return nil }
+        return focalLength
+    }
+
+    private func scaleImage(image: CIImage, by factor: CGFloat) -> UIImage? {
+        guard let uiImage = image.toUIImage(orientation: .up) else { return nil }
+        let size = CGSize(width: uiImage.size.width * factor, height: uiImage.size.height * factor)
+        UIGraphicsBeginImageContextWithOptions(size, false, uiImage.scale)
+        uiImage.draw(in: .init(origin: .zero, size: size))
+        let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return scaledImage
+    }
+
+    // 広角・望遠の二つの画像を同じ倍率に変更する
+    private func adjustImagesToSameScale(firstImage: CIImage, secondImage: CIImage) -> (UIImage?, UIImage?) {
+        guard let firstFocalLength = getFocalLength(from: firstImage),
+              let secondFocalLength = getFocalLength(from: secondImage) else {
+            return (nil, nil)
+        }
+
+        let scaleFactor = firstFocalLength / secondFocalLength
+
+        let scaledFirstImage = scaleImage(image: firstImage, by: 1 / scaleFactor)
+        let scaledSecondImage = scaleImage(image: secondImage, by: scaleFactor)
+
+        return (scaledFirstImage, scaledSecondImage)
+    }
+}
+
 extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         // sampleBufferの処理
@@ -404,9 +482,12 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 extension ViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard let imageData = photo.fileDataRepresentation(),
-              let image = UIImage(data: imageData),
-              let hoge = image.rotate(radians: .pi / -2) else { return }
-        tempImages.append(hoge)
+              let ciImage = CIImage(data: imageData),
+              let uiImage = UIImage(data: imageData),
+              let hoge = uiImage.rotate(radians: .pi / -2) else { return }
+        // hogeで正常な回転がされた状態
+        // ここからUIImageのexif情報を基に同じ見た目になるように画像を変更する
+        tempImages.append((hoge, ciImage))
     }
 
     private func showPhotoPreviewModal(images: [UIImage]) {
