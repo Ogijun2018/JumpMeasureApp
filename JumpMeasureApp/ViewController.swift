@@ -77,7 +77,7 @@ class ViewController: UIViewController {
     private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
 
-    @Published var tempImages: [(UIImage, CIImage)] = []
+    @Published var ciImages: [CIImage] = []
 
     func makeButton(title: String) -> UIButton {
         let button = UIButton()
@@ -315,37 +315,11 @@ class ViewController: UIViewController {
             }
         }.store(in: &cancellables)
 
-        $tempImages.sink { [weak self] images in
-            guard let self, images.count >= 2 else { return }
-            switch cameraMode {
-                // それぞれのmodeのoutputが2つ揃った時点でモーダルを表示させる
-            case .teleWide:
-                guard self.telephotoCameraOutput != nil,
-                      self.wideCameraOutput != nil else { return }
-                
-                // (UIImage?, UIImage?)
-                let adjustedImages = adjustImagesToSameScale(
-                    firstImage: images[0].1,
-                    secondImage: images[1].1
-                )
-                guard let imageOne = adjustedImages.0,
-                      let imageTwo = adjustedImages.1 else { return }
-                // 2つの画像を同じ倍率に変更する
-                showPhotoPreviewModal(images: [imageOne, imageTwo])
-            case .wideUltraWide:
-                guard self.ultraWideCameraOutput != nil,
-                      self.wideCameraOutput != nil else { return }
-
-                // (UIImage?, UIImage?)
-                let adjustedImages = adjustImagesToSameScale(
-                    firstImage: images[0].1,
-                    secondImage: images[1].1
-                )
-                guard let imageOne = adjustedImages.0,
-                      let imageTwo = adjustedImages.1 else { return }
-                // 2つの画像を同じ倍率に変更する
-                showPhotoPreviewModal(images: [imageOne, imageTwo])
-            }
+        $ciImages.sink { [weak self] images in
+            guard let self, images.count >= 2,
+                  // 2つの画像を同じ倍率に変更する
+                  let adjustedImages = adjustImagesToSameScale(images: images) else { return }
+            showPhotoPreviewModal(images: adjustedImages)
         }.store(in: &cancellables)
     }
 
@@ -415,81 +389,6 @@ class ViewController: UIViewController {
 }
 
 extension ViewController {
-
-    /// EXIFデータから35mm換算の焦点距離を取得
-    private func getFocalLength(from image: CIImage) -> CGFloat? {
-        guard let exifDict = image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
-              let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
-        else { return nil }
-        return focalLength
-    }
-
-    private func trimmingImage(_ image: UIImage, trimmingArea: CGRect) -> UIImage? {
-        guard let imgRef = image.cgImage?.cropping(to: trimmingArea) else {
-            return nil
-        }
-        return .init(cgImage: imgRef,
-                     scale: image.scale,
-                     orientation: image.imageOrientation)
-    }
-
-    // 二つの焦点距離の異なる画像を同じ倍率に変更する
-    private func adjustImagesToSameScale(firstImage: CIImage, secondImage: CIImage) -> (UIImage?, UIImage?) {
-        guard let firstFocalLength = getFocalLength(from: firstImage),
-              let secondFocalLength = getFocalLength(from: secondImage) else {
-            return (nil, nil)
-        }
-        guard let firstUIImage = firstImage.toUIImage(orientation: .up),
-              let secondUIImage = secondImage.toUIImage(orientation: .up) else {
-            return (nil, nil)
-        }
-        // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
-        if firstFocalLength > secondFocalLength {
-            // 1枚目が2枚目よりも大きい場合
-            let scaleFactor = firstFocalLength / secondFocalLength
-
-            let trimmingArea = CGRect(
-                x: secondUIImage.centerX - secondUIImage.centerX / scaleFactor,
-                y: secondUIImage.centerY - secondUIImage.centerY / scaleFactor,
-                width: secondUIImage.size.width / scaleFactor,
-                height: secondUIImage.size.height / scaleFactor
-            )
-            guard let scaledSecondImage = trimmingImage(secondUIImage, trimmingArea: trimmingArea) else {
-                // error
-                return (firstUIImage, secondUIImage)
-            }
-            return (firstUIImage, scaledSecondImage)
-        } else if firstFocalLength < secondFocalLength {
-            // 2枚目が1枚目よりも大きい場合
-            let scaleFactor = secondFocalLength / firstFocalLength
-
-            let trimmingArea = CGRect(
-                x: firstUIImage.centerX - firstUIImage.centerX / scaleFactor,
-                y: firstUIImage.centerY - firstUIImage.centerY / scaleFactor,
-                width: firstUIImage.size.width / scaleFactor,
-                height: firstUIImage.size.height / scaleFactor
-            )
-            guard let scaledFirstImage = trimmingImage(firstUIImage, trimmingArea: trimmingArea) else {
-                return (firstUIImage, secondUIImage)
-            }
-            return (scaledFirstImage, secondUIImage)
-        } else {
-            return (nil, nil)
-        }
-    }
-}
-
-extension ViewController: AVCapturePhotoCaptureDelegate {
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let imageData = photo.fileDataRepresentation(),
-              let ciImage = CIImage(data: imageData),
-              let uiImage = UIImage(data: imageData),
-              let hoge = uiImage.rotate(radians: .pi / -2) else { return }
-        // hogeで正常な回転がされた状態
-        // ここからUIImageのexif情報を基に同じ見た目になるように画像を変更する
-        tempImages.append((hoge, ciImage))
-    }
-
     private func showPhotoPreviewModal(images: [UIImage]) {
         let vc = ModalViewController(images: images, didTapConfirm: {
             print("hoge")
@@ -500,10 +399,10 @@ extension ViewController: AVCapturePhotoCaptureDelegate {
         }
         present(vc, animated: true, completion: {  [weak self] in
             // MEMO:
-            // tempImagesは撮影のタイミングで2回appendされ、tempImageが2枚になったときにモーダルを表示する
-            // sink内でtempImagesを削除すると、2回目のappendはguardによって発動せずtempImagesに1枚の画像が残ってしまう
-            // モーダルのcompletionでtempImagesを初期化することで確実に一回の撮影ごとにtempImagesを削除している
-            self?.tempImages = []
+            // ciImagesは撮影のタイミングで2回appendされ、2枚になったときにモーダルを表示する
+            // sink内でciImagesを削除すると、2回目のappendはguardによって発動せずciImagesに画像が1枚残ってしまう
+            // モーダルのcompletionでciImagesを初期化することで確実に一回の撮影ごとにciImagesを削除している
+            self?.ciImages = []
         })
     }
 
@@ -517,5 +416,58 @@ extension ViewController: AVCapturePhotoCaptureDelegate {
         } else {
             print("Successfully saved image to Photos album")
         }
+    }
+
+    // MARK: - Utils private func
+    /// EXIFデータから35mm換算の焦点距離を取得
+    private func getFocalLength(from image: CIImage) -> CGFloat? {
+        guard let exifDict = image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
+              let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
+        else { return nil }
+        return focalLength
+    }
+
+    private func trimmingImage(_ image: UIImage, trimmingArea: CGRect) -> UIImage? {
+        guard let croppedImage = image.cgImage?.cropping(to: trimmingArea) else {
+            return nil
+        }
+        return .init(cgImage: croppedImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    // 焦点距離の異なる二つの画像を同じ倍率に変更する
+    private func adjustImagesToSameScale(images: [CIImage]) -> [UIImage]? {
+        guard let firstFocalLength = getFocalLength(from: images[0]),
+              let secondFocalLength = getFocalLength(from: images[1]),
+              let firstUIImage = images[0].toUIImage(orientation: .up),
+              let secondUIImage = images[1].toUIImage(orientation: .up) else {
+            return nil
+        }
+
+        let (longForcalImage, shortForcalImage, scaleFactor): (UIImage, UIImage, CGFloat) = {
+            firstFocalLength >= secondFocalLength
+                ? (firstUIImage, secondUIImage, firstFocalLength / secondFocalLength)
+                : (secondUIImage, firstUIImage, secondFocalLength / firstFocalLength)
+        }()
+
+        // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
+        let trimmingArea = CGRect(
+            x: shortForcalImage.centerX - shortForcalImage.centerX / scaleFactor,
+            y: shortForcalImage.centerY - shortForcalImage.centerY / scaleFactor,
+            width: shortForcalImage.size.width / scaleFactor,
+            height: shortForcalImage.size.height / scaleFactor
+        )
+        guard let scaledImage = trimmingImage(shortForcalImage, trimmingArea: trimmingArea) else {
+            return nil
+        }
+        return [longForcalImage, scaledImage]
+    }
+
+}
+
+extension ViewController: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard let imageData = photo.fileDataRepresentation(),
+              let ciImage = CIImage(data: imageData) else { return }
+        ciImages.append(ciImage)
     }
 }
