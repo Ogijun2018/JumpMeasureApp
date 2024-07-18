@@ -5,7 +5,6 @@
 //  Created by jun.ogino on 2024/07/18.
 //
 
-import Foundation
 import UIKit
 
 class DisparityMapViewController: UIViewController {
@@ -29,8 +28,6 @@ class DisparityMapViewController: UIViewController {
     }
 
     private func configureViews() {
-        imageView.image = images.first
-
         [imageView, sampleLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
@@ -44,6 +41,13 @@ class DisparityMapViewController: UIViewController {
                 $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
             ])
         }
+
+        print("🚧 ----------")
+        print(images[0].size)
+        print(images[1].size)
+        // 視差画像の生成
+        guard let disparityImage = ImageProcessor.generateDisparityMap(fromLeftImage: images[0], rightImage: images[1]) else { return }
+        imageView.image = images[1]
     }
 
     private func bind() {

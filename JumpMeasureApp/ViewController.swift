@@ -460,7 +460,14 @@ extension ViewController {
         guard let scaledImage = trimmingImage(shortForcalImage, trimmingArea: trimmingArea) else {
             return nil
         }
-        return [longForcalImage, scaledImage]
+
+        // 拡大した焦点距離の短い画像の画像サイズを焦点距離の長い画像の画像サイズに合わせる
+        let resizedSize = CGSize(width: longForcalImage.size.width, height: longForcalImage.size.height)
+        UIGraphicsBeginImageContextWithOptions(resizedSize, false, 0.0)
+        scaledImage.draw(in: CGRect(origin: .zero, size: resizedSize))
+        guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
+
+        return [longForcalImage, resizedImage]
     }
 
 }
