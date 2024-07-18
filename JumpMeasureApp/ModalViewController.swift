@@ -54,6 +54,7 @@ final class ModalViewController: UIViewController {
         }, for: .touchUpInside)
         confirmButton.addAction(.init { [weak self] _ in
             self?.didTapConfirm?()
+            self?.dismiss(animated: true)
         }, for: .touchUpInside)
     }
 

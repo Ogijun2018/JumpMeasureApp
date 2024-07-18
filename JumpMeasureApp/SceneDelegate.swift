@@ -18,7 +18,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // window生成
         let window = UIWindow(windowScene: scene)
         // ルートビュー指定
-        window.rootViewController = ViewController()
+        let vc = ViewController()
+        window.rootViewController = UINavigationController(rootViewController: vc)
         // キーウインドウ指定
         window.makeKeyAndVisible()
         // windowインスタンスが解放されないようにパラメータに代入する

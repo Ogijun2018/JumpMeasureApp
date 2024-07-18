@@ -11,6 +11,7 @@
 		B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */; };
 		B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86822C45173800E0DFF1 /* ModalViewController.swift */; };
 		B87C86852C451DF000E0DFF1 /* UIImage+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */; };
+		B8C1A41D2C48C6BC0021F5BC /* DisparityMapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C1A41C2C48C6BC0021F5BC /* DisparityMapViewController.swift */; };
 		FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */; };
 		FB1B09A62C3ECCBC00FA69E7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */; };
 		FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */; };
@@ -23,6 +24,7 @@
 		B83E54622C40DB2100BBF9B4 /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		B87C86822C45173800E0DFF1 /* ModalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalViewController.swift; sourceTree = "<group>"; };
 		B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Utils.swift"; sourceTree = "<group>"; };
+		B8C1A41C2C48C6BC0021F5BC /* DisparityMapViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisparityMapViewController.swift; sourceTree = "<group>"; };
 		FB1B09A02C3ECCBC00FA69E7 /* JumpMeasureApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JumpMeasureApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -65,6 +67,7 @@
 				FB1B09A32C3ECCBC00FA69E7 /* AppDelegate.swift */,
 				FB1B09A52C3ECCBC00FA69E7 /* SceneDelegate.swift */,
 				FB1B09A72C3ECCBC00FA69E7 /* ViewController.swift */,
+				B8C1A41C2C48C6BC0021F5BC /* DisparityMapViewController.swift */,
 				B80337B12C47361000ED9550 /* MeasureViewController.swift */,
 				B87C86842C451DF000E0DFF1 /* UIImage+Utils.swift */,
 				B87C86822C45173800E0DFF1 /* ModalViewController.swift */,
@@ -148,6 +151,7 @@
 			files = (
 				B80337B22C47361000ED9550 /* MeasureViewController.swift in Sources */,
 				FB1B09A82C3ECCBC00FA69E7 /* ViewController.swift in Sources */,
+				B8C1A41D2C48C6BC0021F5BC /* DisparityMapViewController.swift in Sources */,
 				B87C86832C45173800E0DFF1 /* ModalViewController.swift in Sources */,
 				B83E54632C40DB2100BBF9B4 /* UIColor+Hex.swift in Sources */,
 				FB1B09A42C3ECCBC00FA69E7 /* AppDelegate.swift in Sources */,

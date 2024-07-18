@@ -391,7 +391,8 @@ class ViewController: UIViewController {
 extension ViewController {
     private func showPhotoPreviewModal(images: [UIImage]) {
         let vc = ModalViewController(images: images, didTapConfirm: {
-            print("hoge")
+            let vc = DisparityMapViewController(images: images)
+            self.navigationController?.pushViewController(vc, animated: true)
         })
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]
