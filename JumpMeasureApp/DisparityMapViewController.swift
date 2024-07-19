@@ -19,7 +19,8 @@ class DisparityMapViewController: UIViewController {
 
     private let disparityImageView = UIImageView()
     private let imageView = UIImageView()
-    private let images: [UIImage]
+    private let firstImage: UIImage
+    private let secondImage: UIImage
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,25 +44,18 @@ class DisparityMapViewController: UIViewController {
             ])
         }
 
-        print("🚧 ----------")
-        print(images[0].size)
-        print(images[1].size)
         // 視差画像の生成
-//        guard let disparityImage = ImageProcessor.generateDisparityMap(
-//            fromLeftImage: images[0],
-//            rightImage: images[1]
-//        ) else { return }
-//        disparityImageView.image = images[0]
-//        imageView.image = images[1]
-//        imageView.alpha = 0.5
+        let disparityImage = ImageProcessor.transform(firstImage, image2: secondImage, usingAKAZE: true)
+        disparityImageView.image = disparityImage
     }
 
     private func bind() {
 
     }
 
-    init(images: [UIImage]) {
-        self.images = images
+    init(firstImage: UIImage, secondImage: UIImage) {
+        self.firstImage = firstImage
+        self.secondImage = secondImage
         super.init(nibName: nil, bundle: nil)
 
     }

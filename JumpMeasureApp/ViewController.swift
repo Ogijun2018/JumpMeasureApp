@@ -339,7 +339,9 @@ class ViewController: UIViewController {
             // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
             guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
             guard let hoge = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], andImage: adjustedImages[1], usingAKAZE: true) else { return }
-            showPhotoPreviewModal(image: hoge)
+            showPhotoPreviewModal(image: hoge,
+                                  firstImage: adjustedImages[0],
+                                  secondImage: adjustedImages[1])
             self.saveImageToPhotosAlbum(hoge)
         }.store(in: &cancellables)
     }
@@ -410,12 +412,15 @@ class ViewController: UIViewController {
 }
 
 extension ViewController {
-    private func showPhotoPreviewModal(image: UIImage) {
+    private func showPhotoPreviewModal(image: UIImage, firstImage: UIImage, secondImage: UIImage) {
         let vc = ModalViewController(image: image, didTapConfirm: { [weak self] in
 //            self?.saveImageToPhotosAlbum(images[0])
 //            self?.saveImageToPhotosAlbum(images[1])
-//            let vc = DisparityMapViewController(image: image)
-//            self?.navigationController?.pushViewController(vc, animated: true)
+            let vc = DisparityMapViewController(
+                firstImage: firstImage,
+                secondImage: secondImage
+            )
+            self?.navigationController?.pushViewController(vc, animated: true)
         })
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]

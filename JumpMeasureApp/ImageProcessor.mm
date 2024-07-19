@@ -185,6 +185,7 @@
     return resultImage;
 }
 
+/// 特徴点マッチング
 + (UIImage *)matchFeaturesBetweenImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE {
     cv::Mat img1 = [self UIImageToCVMat:image1];
     cv::Mat img2 = [self UIImageToCVMat:image2];
@@ -212,7 +213,7 @@
     });
 
     // Draw top matches
-    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + round(matches.size() * 0.05));
+    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + round(matches.size() * 0.1));
     cv::Mat imgMatches;
     cv::drawMatches(img1, keypoints1, img2, keypoints2, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 
@@ -250,37 +251,59 @@
         return a.distance < b.distance;
     });
 
-    // Sort matches and select the best ones
-    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + std::min((int)matches.size(), 50));
+    // マッチングコストの高い上位 10% を描画用に抽出する
+    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + round(matches.size() * 0.1));
 
-    // Find homography
+    // 位置合わせ
     std::vector<cv::Point2f> srcPoints, dstPoints;
     for (const auto& match : goodMatches) {
         srcPoints.push_back(keypoints1[match.queryIdx].pt);
         dstPoints.push_back(keypoints2[match.trainIdx].pt);
     }
-    cv::Mat mask;
-    cv::Mat H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 0.0, mask);
+//    cv::Mat mask;
+//    cv::Mat H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 0.0, mask);
+//
+//    // Warp the second image
+//    cv::Mat warpedImage;
+//    cv::warpPerspective(img2, warpedImage, H, img1.size());
+//    // Ensure warpedImage is in grayscale and then convert to CV_8UC1 if it's not already
+//    if (warpedImage.channels() > 1) {
+//        cv::cvtColor(warpedImage, warpedImage, cv::COLOR_BGR2GRAY);
+//    }
+//    warpedImage.convertTo(warpedImage, CV_8UC1);
+//
+//    // Convert to Jet and HSV color maps
+//    cv::Mat img1Jet, warpedHSV;
+//    cv::applyColorMap(gray1, img1Jet, cv::COLORMAP_JET);
+//    cv::applyColorMap(warpedImage, warpedHSV, cv::COLORMAP_HSV);
+//
+//    // Combine images
+//    cv::Mat combinedImage;
+//    cv::addWeighted(img1Jet, 0.5, warpedHSV, 0.5, 0, combinedImage);
+//
+//    return [self CVMatToUIImage:combinedImage];
 
-    // Warp the second image
-    cv::Mat warpedImage;
-    cv::warpPerspective(img2, warpedImage, H, img1.size());
-    // Ensure warpedImage is in grayscale and then convert to CV_8UC1 if it's not already
-    if (warpedImage.channels() > 1) {
-        cv::cvtColor(warpedImage, warpedImage, cv::COLOR_BGR2GRAY);
+    cv::Mat mask, H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 5.0, mask);
+    cv::Mat Re_img2;
+    cv::warpPerspective(img2, Re_img2, H, img1.size());
+
+    // Extract matches used in the homography computation
+    std::vector<cv::DMatch> usedMatches;
+    for (int i = 0; i < mask.rows; i++) {
+        if (mask.at<uchar>(i) == 1) {
+            usedMatches.push_back(goodMatches[i]);
+        }
     }
-    warpedImage.convertTo(warpedImage, CV_8UC1);
 
-    // Convert to Jet and HSV color maps
-    cv::Mat img1Jet, warpedHSV;
-    cv::applyColorMap(gray1, img1Jet, cv::COLORMAP_JET);
-    cv::applyColorMap(warpedImage, warpedHSV, cv::COLORMAP_HSV);
+    // Prepare images for overlap and disparity computation
+    cv::Mat img1Jet, Re_img2HSV;
+    cv::applyColorMap(img1, img1Jet, cv::COLORMAP_JET);
+    cv::applyColorMap(Re_img2, Re_img2HSV, cv::COLORMAP_HSV);
+    cv::Mat overlapImg;
+    cv::addWeighted(img1Jet, 0.5, Re_img2HSV, 0.5, 0, overlapImg);
 
-    // Combine images
-    cv::Mat combinedImage;
-    cv::addWeighted(img1Jet, 0.5, warpedHSV, 0.5, 0, combinedImage);
-
-    return [self CVMatToUIImage:combinedImage];
+    // Return the combined image as UIImage
+    return [self CVMatToUIImage:overlapImg];
 }
 
 @end
