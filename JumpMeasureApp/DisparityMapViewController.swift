@@ -47,13 +47,13 @@ class DisparityMapViewController: UIViewController {
         print(images[0].size)
         print(images[1].size)
         // 視差画像の生成
-        guard let disparityImage = ImageProcessor.generateDisparityMap(
-            fromLeftImage: images[0],
-            rightImage: images[1]
-        ) else { return }
-        disparityImageView.image = images[0]
-        imageView.image = images[1]
-        imageView.alpha = 0.5
+//        guard let disparityImage = ImageProcessor.generateDisparityMap(
+//            fromLeftImage: images[0],
+//            rightImage: images[1]
+//        ) else { return }
+//        disparityImageView.image = images[0]
+//        imageView.image = images[1]
+//        imageView.alpha = 0.5
     }
 
     private func bind() {

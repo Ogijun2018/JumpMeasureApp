@@ -10,10 +10,12 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "CalibrateParameter.h"
 
 @interface ImageProcessor : NSObject
 
-+ (UIImage *)generateDisparityMapFromLeftImage:(UIImage *)leftImage rightImage:(UIImage *)rightImage;
++ (UIImage *)undistortionFromImage:(UIImage *)image
+                        imageParam:(CalibrateParameter *)param;
 + (double)calculateDistanceFromDisparityMap:(UIImage *)disparityMap point1:(CGPoint)point1 point2:(CGPoint)point2 focalLength:(double)focalLength baseline:(double)baseline;
 
 @end

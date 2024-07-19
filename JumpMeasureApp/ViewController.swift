@@ -64,6 +64,13 @@ class ViewController: UIViewController {
         return view
     }()
 
+    private let calibrationButton: UIButton = {
+        let button = UIButton()
+        button.setImage(.init(systemName: "camera.metering.center.weighted"), for: .normal)
+        button.tintColor = .white
+        return button
+    }()
+    
     enum CameraMode {
         case teleWide
         case wideUltraWide
@@ -112,12 +119,14 @@ class ViewController: UIViewController {
          shutterButton,
          stackView,
          loadingBackgroundView,
-         loadingIndicatorView].forEach {
+         loadingIndicatorView
+        ].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
         stackView.addArrangedSubview(teleWideButton)
         stackView.addArrangedSubview(wideUltraWideButton)
+        stackView.addArrangedSubview(calibrationButton)
 
         // teleWideButton config
         teleWideButton.isHidden = true
@@ -129,6 +138,10 @@ class ViewController: UIViewController {
         wideUltraWideButton.isHidden = true
         wideUltraWideButton.addAction(.init { [weak self] _ in
             self?.cameraMode = .wideUltraWide
+        }, for: .touchUpInside)
+
+        calibrationButton.addAction(.init { [weak self] _ in
+            print("button tapped")
         }, for: .touchUpInside)
 
         [cameraPreviewView, 
@@ -317,9 +330,10 @@ class ViewController: UIViewController {
 
         $ciImages.sink { [weak self] images in
             guard let self, images.count >= 2,
+                  let images = calibrateImages(images: images, mode: cameraMode) else { return }
                   // 2つの画像を同じ倍率に変更する
-                  let adjustedImages = adjustImagesToSameScale(images: images) else { return }
-            showPhotoPreviewModal(images: adjustedImages)
+//            let adjustedImages = adjustImagesToSameScale(images: images)
+            showPhotoPreviewModal(images: images)
         }.store(in: &cancellables)
     }
 
@@ -435,6 +449,44 @@ extension ViewController {
             return nil
         }
         return .init(cgImage: croppedImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private func calibrateImages(images: [CIImage], mode: CameraMode) -> [UIImage]? {
+        guard let firstFocalLength = getFocalLength(from: images[0]),
+              let secondFocalLength = getFocalLength(from: images[1]),
+              let firstUIImage = images[0].toUIImage(orientation: .up),
+              let secondUIImage = images[1].toUIImage(orientation: .up) else {
+            return nil
+        }
+
+        switch mode {
+        case .teleWide:
+            // 焦点距離が短い方が広角カメラ
+            if firstFocalLength <= secondFocalLength {
+                // firstUIImageが広角の場合
+                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
+                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.telephotoCameraParameter) else { return nil }
+                return [hoge, fuga]
+            } else {
+                // secondUIImageが広角の場合
+                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.telephotoCameraParameter),
+                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return nil }
+                return [hoge, fuga]
+            }
+        case .wideUltraWide:
+            // 焦点距離が短い方が超広角カメラ
+            if firstFocalLength <= secondFocalLength {
+                // firstUIImageが超広角の場合
+                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.ultraWideCameraParameter),
+                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return nil }
+                return [hoge, fuga]
+            } else {
+                // secondUIImageが超広角の場合
+                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
+                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.ultraWideCameraParameter) else { return nil }
+                return [hoge, fuga]
+            }
+        }
     }
 
     // 焦点距離の異なる二つの画像を同じ倍率に変更する

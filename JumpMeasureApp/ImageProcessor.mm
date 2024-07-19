@@ -7,8 +7,58 @@
 
 #import "opencv2/opencv.hpp"
 #import "ImageProcessor.h"
+#import "CalibrateParameter.h"
 
 @implementation ImageProcessor
+
++ (cv::Mat)undistortion:(cv::Mat)img
+                    mtx:(NSArray<NSArray<NSNumber *> *> *)mtx
+                    dist:(NSArray<NSArray<NSNumber *> *> *)dist
+                    h:(int)h w:(int)w {
+    // Convert NSArray to cv::Mat
+    cv::Mat cameraMatrix(3, 3, CV_64F), distCoeffs(1, 5, CV_64F);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            cameraMatrix.at<double>(i, j) = [[mtx objectAtIndex:i] objectAtIndex:j].doubleValue;
+        }
+    }
+    for (int i = 0; i < dist[0].count; i++) {
+        distCoeffs.at<double>(0, i) = [[dist objectAtIndex:0] objectAtIndex:i].doubleValue;
+    }
+
+    // Get the optimal new camera matrix
+    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, cv::Size(w, h), 1);
+
+    // Create a new undistorted image, ensure it is a new instance
+    cv::Mat undistorted = cv::Mat::zeros(img.size(), img.type());
+
+    // Undistort the image
+    cv::undistort(img, undistorted, cameraMatrix, distCoeffs, newCameraMatrix);
+    return undistorted;
+}
+
+/// 画像の歪みを削除するfunc
++ (UIImage *)undistortionFromImage:(UIImage *)image
+                        imageParam:(CalibrateParameter *)param {
+    auto creater = cv::AKAZE::create();
+    int distance_func = cv::NORM_HAMMING;
+    cv::BFMatcher matcher(distance_func, true);
+
+    // SGBM関数のパラメータを定義
+    int minDisparity  = -50, numDisparities = 100, blockSize = 11, cost1 = 1, cost2 = 4;
+    int disp12MaxDiff = 0, preFilterCap = 0, uniquenessRatio = 0, sWS = 600, speckleRange = 2;
+    int P1 = cost1 * 3 * (blockSize * blockSize);
+    int P2 = cost2 * 3 * (blockSize * blockSize);
+    cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create(minDisparity, numDisparities, blockSize, P1, P2,
+                                                            disp12MaxDiff, preFilterCap, uniquenessRatio, sWS, speckleRange, cv::StereoSGBM::MODE_SGBM_3WAY);
+
+    cv::Mat imageMat = [self UIImageToCVMat:image];
+    int h = imageMat.rows, w = imageMat.cols;
+    // 歪み除去
+    imageMat = [self undistortion:imageMat mtx:param.mtx dist:param.dist h:h w:w];
+
+    return [self CVMatToUIImage:imageMat];
+}
 
 + (UIImage *)generateDisparityMapFromLeftImage:(UIImage *)leftImage rightImage:(UIImage *)rightImage {
     cv::Mat leftMat = [self UIImageToCVMat:leftImage];
@@ -22,44 +72,9 @@
     cv::cvtColor(leftMat, leftMat, cv::COLOR_RGBA2GRAY);
     cv::cvtColor(rightMat, rightMat, cv::COLOR_RGBA2GRAY);
 
-//    cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(
-//        0, // minDisparity
-//        16, // numDisparities
-//        5, // blockSize
-//        8 * 3 * 5 * 5, // P1
-//        32 * 3 * 5 * 5, // P2
-//        1, // disp12MaxDiff
-//        63, // preFilterCap
-//        10, // uniquenessRatio
-//        100, // speckleWindowSize
-//        32, // speckleRange
-//        cv::StereoSGBM::MODE_SGBM // mode
-//    );
     cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(16, 5);
     cv::Mat disparity;
     stereoSGBM->compute(leftMat, rightMat, disparity);
-//    cv::Ptr<cv::StereoBM> stereoBM = cv::StereoBM::create(16, 5);
-//    cv::Mat disparity;
-//    stereoBM->compute(leftMat, rightMat, disparity);
-
-//    // 視差画像の正規化
-//    double minVal, maxVal;
-//    cv::minMaxLoc(disparity, &minVal, &maxVal);
-//    disparity.convertTo(disparity, CV_8U, 255 / (maxVal - minVal));
-//
-//    // 視差画像をカラーマップに変換
-//    cv::Mat colorDisparity;
-//    applyColorMap(disparity, colorDisparity, cv::COLORMAP_JET);
-//
-//    // 元の左画像をカラーに戻す
-////    cv::cvtColor(leftMat, leftMat, cv::COLOR_GRAY2RGBA);
-//
-//    // 視差画像と元の画像をブレンド
-//    cv::Mat blendedImage;
-//    double alpha = 0.5; // 透過率の調整
-//    cv::addWeighted(leftMat, alpha, colorDisparity, 1 - alpha, 0.0, blendedImage);
-//
-//    return [self CVMatToUIImage:blendedImage];
 
     cv::normalize(disparity, disparity, 0, 255, cv::NORM_MINMAX, CV_8U);
 
