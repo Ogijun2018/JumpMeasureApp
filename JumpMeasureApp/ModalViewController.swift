@@ -85,6 +85,8 @@ final class ModalViewController: UIViewController {
         rightImageView.contentMode = .scaleAspectFill
         leftImageView.image = images[0]
         rightImageView.image = images[1]
+        print(images[0].size)
+        print(images[1].size)
 
         // V:|[leftImageContainerView]|
         // V:|[rightImageContainerView]|

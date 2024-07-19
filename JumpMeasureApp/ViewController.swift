@@ -329,11 +329,13 @@ class ViewController: UIViewController {
         }.store(in: &cancellables)
 
         $ciImages.sink { [weak self] images in
-            guard let self, images.count >= 2,
-                  let images = calibrateImages(images: images, mode: cameraMode) else { return }
-                  // 2つの画像を同じ倍率に変更する
-//            let adjustedImages = adjustImagesToSameScale(images: images)
-            showPhotoPreviewModal(images: images)
+            guard let self, images.count >= 2 else { return }
+            // 画像のキャリブレーションを行う
+            let (images, scaleFactor) = calibrateImages(images: images, mode: cameraMode)
+            // 2つの画像を同じ倍率に変更する
+            // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
+            guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
+            showPhotoPreviewModal(images: adjustedImages)
         }.store(in: &cancellables)
     }
 
@@ -441,6 +443,7 @@ extension ViewController {
         guard let exifDict = image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
               let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
         else { return nil }
+        print("🚧 focalLength \(focalLength)")
         return focalLength
     }
 
@@ -451,12 +454,12 @@ extension ViewController {
         return .init(cgImage: croppedImage, scale: image.scale, orientation: image.imageOrientation)
     }
 
-    private func calibrateImages(images: [CIImage], mode: CameraMode) -> [UIImage]? {
+    private func calibrateImages(images: [CIImage], mode: CameraMode) -> ([UIImage]?, CGFloat?){
         guard let firstFocalLength = getFocalLength(from: images[0]),
               let secondFocalLength = getFocalLength(from: images[1]),
               let firstUIImage = images[0].toUIImage(orientation: .up),
               let secondUIImage = images[1].toUIImage(orientation: .up) else {
-            return nil
+            return (nil, nil)
         }
 
         switch mode {
@@ -464,66 +467,59 @@ extension ViewController {
             // 焦点距離が短い方が広角カメラ
             if firstFocalLength <= secondFocalLength {
                 // firstUIImageが広角の場合
-                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
-                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.telephotoCameraParameter) else { return nil }
-                return [hoge, fuga]
+                guard let wide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
+                      let telephoto = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.telephotoCameraParameter) else { return (nil, nil) }
+                return ([wide, telephoto], secondFocalLength/firstFocalLength)
             } else {
                 // secondUIImageが広角の場合
-                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.telephotoCameraParameter),
-                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return nil }
-                return [hoge, fuga]
+                guard let telephoto = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.telephotoCameraParameter),
+                      let wide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return (nil, nil) }
+                return ([wide, telephoto], firstFocalLength/secondFocalLength)
             }
         case .wideUltraWide:
             // 焦点距離が短い方が超広角カメラ
             if firstFocalLength <= secondFocalLength {
                 // firstUIImageが超広角の場合
-                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.ultraWideCameraParameter),
-                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return nil }
-                return [hoge, fuga]
+                guard let ultraWide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.ultraWideCameraParameter),
+                      let wide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return (nil, nil) }
+                return ([ultraWide, wide], secondFocalLength/firstFocalLength)
             } else {
                 // secondUIImageが超広角の場合
-                guard let hoge = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
-                      let fuga = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.ultraWideCameraParameter) else { return nil }
-                return [hoge, fuga]
+                guard let wide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
+                      let ultraWide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.ultraWideCameraParameter) else { return (nil, nil) }
+                return ([ultraWide, wide], firstFocalLength/secondFocalLength)
             }
         }
     }
 
     // 焦点距離の異なる二つの画像を同じ倍率に変更する
-    private func adjustImagesToSameScale(images: [CIImage]) -> [UIImage]? {
-        guard let firstFocalLength = getFocalLength(from: images[0]),
-              let secondFocalLength = getFocalLength(from: images[1]),
-              let firstUIImage = images[0].toUIImage(orientation: .up),
-              let secondUIImage = images[1].toUIImage(orientation: .up) else {
-            return nil
-        }
-
-        let (longForcalImage, shortForcalImage, scaleFactor): (UIImage, UIImage, CGFloat) = {
-            firstFocalLength >= secondFocalLength
-                ? (firstUIImage, secondUIImage, firstFocalLength / secondFocalLength)
-                : (secondUIImage, firstUIImage, secondFocalLength / firstFocalLength)
-        }()
+    private func adjustImagesToSameScale(images: [UIImage]?, scaleFactor: CGFloat?) -> [UIImage]? {
+        guard let shortFocalImage = images?[0],
+              let longFocalImage = images?[1],
+              let scaleFactor else { return nil }
 
         // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
         let trimmingArea = CGRect(
-            x: shortForcalImage.centerX - shortForcalImage.centerX / scaleFactor,
-            y: shortForcalImage.centerY - shortForcalImage.centerY / scaleFactor,
-            width: shortForcalImage.size.width / scaleFactor,
-            height: shortForcalImage.size.height / scaleFactor
+            x: shortFocalImage.centerX - shortFocalImage.size.width / scaleFactor / 2,
+            y: shortFocalImage.centerY - shortFocalImage.size.height / scaleFactor / 2 - 30,
+            width: shortFocalImage.size.width / scaleFactor,
+            height: shortFocalImage.size.height / scaleFactor
         )
-        guard let scaledImage = trimmingImage(shortForcalImage, trimmingArea: trimmingArea) else {
+        print(scaleFactor)
+        print(trimmingArea)
+        guard let scaledImage = trimmingImage(shortFocalImage, trimmingArea: trimmingArea) else {
             return nil
         }
 
         // 拡大した焦点距離の短い画像の画像サイズを焦点距離の長い画像の画像サイズに合わせる
         // MEMO: resizedSizeをlongForcalImage.size.widthとするとscaledImageが 5760x3240 の画像になってしまった
         // 1920x1080に合わせるため、1/3のCGSizeを指定している
-        let resizedSize = CGSize(width: longForcalImage.size.width / 3, height: longForcalImage.size.height / 3)
+        let resizedSize = CGSize(width: longFocalImage.size.width/3, height: longFocalImage.size.height/3)
         UIGraphicsBeginImageContextWithOptions(resizedSize, false, 0.0)
         scaledImage.draw(in: CGRect(origin: .zero, size: resizedSize))
         guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
 
-        return [longForcalImage, resizedImage]
+        return [longFocalImage, resizedImage]
     }
 
 }
