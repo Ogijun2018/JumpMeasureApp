@@ -13,7 +13,6 @@
 
 @interface ImageProcessor : NSObject
 
-+ (UIImage *) convertToGrayscale:(UIImage *) image;
 + (UIImage *)generateDisparityMapFromLeftImage:(UIImage *)leftImage rightImage:(UIImage *)rightImage;
 + (double)calculateDistanceFromDisparityMap:(UIImage *)disparityMap point1:(CGPoint)point1 point2:(CGPoint)point2 focalLength:(double)focalLength baseline:(double)baseline;
 

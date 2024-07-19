@@ -390,9 +390,11 @@ class ViewController: UIViewController {
 
 extension ViewController {
     private func showPhotoPreviewModal(images: [UIImage]) {
-        let vc = ModalViewController(images: images, didTapConfirm: {
+        let vc = ModalViewController(images: images, didTapConfirm: { [weak self] in
+//            self?.saveImageToPhotosAlbum(images[0])
+//            self?.saveImageToPhotosAlbum(images[1])
             let vc = DisparityMapViewController(images: images)
-            self.navigationController?.pushViewController(vc, animated: true)
+            self?.navigationController?.pushViewController(vc, animated: true)
         })
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]
@@ -462,7 +464,9 @@ extension ViewController {
         }
 
         // 拡大した焦点距離の短い画像の画像サイズを焦点距離の長い画像の画像サイズに合わせる
-        let resizedSize = CGSize(width: longForcalImage.size.width, height: longForcalImage.size.height)
+        // MEMO: resizedSizeをlongForcalImage.size.widthとするとscaledImageが 5760x3240 の画像になってしまった
+        // 1920x1080に合わせるため、1/3のCGSizeを指定している
+        let resizedSize = CGSize(width: longForcalImage.size.width / 3, height: longForcalImage.size.height / 3)
         UIGraphicsBeginImageContextWithOptions(resizedSize, false, 0.0)
         scaledImage.draw(in: CGRect(origin: .zero, size: resizedSize))
         guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else { return nil }

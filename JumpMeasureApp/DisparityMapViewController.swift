@@ -11,12 +11,13 @@ class DisparityMapViewController: UIViewController {
 
     private let sampleLabel: UILabel = {
         let label = UILabel()
-        label.text = "計測したい2点を選択してください"
+        label.text = ""
         label.font = .systemFont(ofSize: 30, weight: .semibold)
         label.textColor = .white
         return label
     }()
 
+    private let disparityImageView = UIImageView()
     private let imageView = UIImageView()
     private let images: [UIImage]
 
@@ -28,12 +29,12 @@ class DisparityMapViewController: UIViewController {
     }
 
     private func configureViews() {
-        [imageView, sampleLabel].forEach {
+        [disparityImageView, imageView, sampleLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
 
-        [sampleLabel, imageView].forEach {
+        [sampleLabel, disparityImageView, imageView].forEach {
             NSLayoutConstraint.activate([
                 $0.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
                 $0.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
@@ -46,8 +47,13 @@ class DisparityMapViewController: UIViewController {
         print(images[0].size)
         print(images[1].size)
         // 視差画像の生成
-        guard let disparityImage = ImageProcessor.generateDisparityMap(fromLeftImage: images[0], rightImage: images[1]) else { return }
+        guard let disparityImage = ImageProcessor.generateDisparityMap(
+            fromLeftImage: images[0],
+            rightImage: images[1]
+        ) else { return }
+        disparityImageView.image = images[0]
         imageView.image = images[1]
+        imageView.alpha = 0.5
     }
 
     private func bind() {

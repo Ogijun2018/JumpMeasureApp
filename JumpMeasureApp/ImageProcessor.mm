@@ -14,12 +14,52 @@
     cv::Mat leftMat = [self UIImageToCVMat:leftImage];
     cv::Mat rightMat = [self UIImageToCVMat:rightImage];
 
+    if (leftMat.size() != rightMat.size()) {
+        printf("%s", "size is different");
+        cv::resize(rightMat, rightMat, leftMat.size());
+    }
+
     cv::cvtColor(leftMat, leftMat, cv::COLOR_RGBA2GRAY);
     cv::cvtColor(rightMat, rightMat, cv::COLOR_RGBA2GRAY);
 
-    cv::Ptr<cv::StereoBM> stereoBM = cv::StereoBM::create(16, 15);
+//    cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(
+//        0, // minDisparity
+//        16, // numDisparities
+//        5, // blockSize
+//        8 * 3 * 5 * 5, // P1
+//        32 * 3 * 5 * 5, // P2
+//        1, // disp12MaxDiff
+//        63, // preFilterCap
+//        10, // uniquenessRatio
+//        100, // speckleWindowSize
+//        32, // speckleRange
+//        cv::StereoSGBM::MODE_SGBM // mode
+//    );
+    cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(16, 5);
     cv::Mat disparity;
-    stereoBM->compute(leftMat, rightMat, disparity);
+    stereoSGBM->compute(leftMat, rightMat, disparity);
+//    cv::Ptr<cv::StereoBM> stereoBM = cv::StereoBM::create(16, 5);
+//    cv::Mat disparity;
+//    stereoBM->compute(leftMat, rightMat, disparity);
+
+//    // 視差画像の正規化
+//    double minVal, maxVal;
+//    cv::minMaxLoc(disparity, &minVal, &maxVal);
+//    disparity.convertTo(disparity, CV_8U, 255 / (maxVal - minVal));
+//
+//    // 視差画像をカラーマップに変換
+//    cv::Mat colorDisparity;
+//    applyColorMap(disparity, colorDisparity, cv::COLORMAP_JET);
+//
+//    // 元の左画像をカラーに戻す
+////    cv::cvtColor(leftMat, leftMat, cv::COLOR_GRAY2RGBA);
+//
+//    // 視差画像と元の画像をブレンド
+//    cv::Mat blendedImage;
+//    double alpha = 0.5; // 透過率の調整
+//    cv::addWeighted(leftMat, alpha, colorDisparity, 1 - alpha, 0.0, blendedImage);
+//
+//    return [self CVMatToUIImage:blendedImage];
 
     cv::normalize(disparity, disparity, 0, 255, cv::NORM_MINMAX, CV_8U);
 
@@ -40,16 +80,6 @@
     double distance2 = (focalLength * baseline) / disparity2;
 
     return fabs(distance1 - distance2);
-}
-
-+ (UIImage *) convertToGrayscale:(UIImage *) image {
-    cv::Mat srcMat, grayMat;
-    srcMat = [self UIImageToCVMat: image];
-
-    // グレースケールに変換
-    cv::cvtColor(srcMat, grayMat, cv::COLOR_BGR2GRAY);
-
-    return [self CVMatToUIImage:grayMat];
 }
 
 /// UIImage を cv::Mat に変換する
