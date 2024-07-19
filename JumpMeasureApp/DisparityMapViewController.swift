@@ -45,7 +45,7 @@ class DisparityMapViewController: UIViewController {
         }
 
         // 視差画像の生成
-        let disparityImage = ImageProcessor.transform(firstImage, image2: secondImage, usingAKAZE: true)
+        let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage, usingAKAZE: true)
         disparityImageView.image = disparityImage
     }
 

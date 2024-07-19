@@ -260,32 +260,23 @@
         srcPoints.push_back(keypoints1[match.queryIdx].pt);
         dstPoints.push_back(keypoints2[match.trainIdx].pt);
     }
-//    cv::Mat mask;
-//    cv::Mat H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 0.0, mask);
-//
-//    // Warp the second image
-//    cv::Mat warpedImage;
-//    cv::warpPerspective(img2, warpedImage, H, img1.size());
-//    // Ensure warpedImage is in grayscale and then convert to CV_8UC1 if it's not already
-//    if (warpedImage.channels() > 1) {
-//        cv::cvtColor(warpedImage, warpedImage, cv::COLOR_BGR2GRAY);
-//    }
-//    warpedImage.convertTo(warpedImage, CV_8UC1);
-//
-//    // Convert to Jet and HSV color maps
-//    cv::Mat img1Jet, warpedHSV;
-//    cv::applyColorMap(gray1, img1Jet, cv::COLORMAP_JET);
-//    cv::applyColorMap(warpedImage, warpedHSV, cv::COLORMAP_HSV);
-//
-//    // Combine images
-//    cv::Mat combinedImage;
-//    cv::addWeighted(img1Jet, 0.5, warpedHSV, 0.5, 0, combinedImage);
-//
-//    return [self CVMatToUIImage:combinedImage];
 
     cv::Mat mask, H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 5.0, mask);
     cv::Mat Re_img2;
+
+    // Ensure Re_img2 is in grayscale and then convert to CV_8UC1 if it's not already
     cv::warpPerspective(img2, Re_img2, H, img1.size());
+    if (Re_img2.channels() > 1) {
+        cv::cvtColor(Re_img2, Re_img2, cv::COLOR_BGR2GRAY);
+    }
+    Re_img2.convertTo(Re_img2, CV_8UC1);
+    
+    // Ensure img1 is in grayscale and then convert to CV_8UC1 if it's not already
+    if (img1.channels() > 1) {
+        cv::cvtColor(img1, img1, cv::COLOR_BGR2GRAY);
+    }
+    img1.convertTo(img1, CV_8UC1);
+
 
     // Extract matches used in the homography computation
     std::vector<cv::DMatch> usedMatches;
