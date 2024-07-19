@@ -26,11 +26,9 @@
         distCoeffs.at<double>(0, i) = [[dist objectAtIndex:0] objectAtIndex:i].doubleValue;
     }
 
-    // Get the optimal new camera matrix
-    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, cv::Size(w, h), 1);
-
-    // Create a new undistorted image, ensure it is a new instance
-    cv::Mat undistorted = cv::Mat::zeros(img.size(), img.type());
+    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, cv::Size(w, h), 0);
+    cv::Mat undistorted;
+    undistorted.create(img.size(), img.type());
 
     // Undistort the image
     cv::undistort(img, undistorted, cameraMatrix, distCoeffs, newCameraMatrix);
@@ -40,24 +38,13 @@
 /// 画像の歪みを削除するfunc
 + (UIImage *)undistortionFromImage:(UIImage *)image
                         imageParam:(CalibrateParameter *)param {
-    auto creater = cv::AKAZE::create();
-    int distance_func = cv::NORM_HAMMING;
-    cv::BFMatcher matcher(distance_func, true);
-
-    // SGBM関数のパラメータを定義
-    int minDisparity  = -50, numDisparities = 100, blockSize = 11, cost1 = 1, cost2 = 4;
-    int disp12MaxDiff = 0, preFilterCap = 0, uniquenessRatio = 0, sWS = 600, speckleRange = 2;
-    int P1 = cost1 * 3 * (blockSize * blockSize);
-    int P2 = cost2 * 3 * (blockSize * blockSize);
-    cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create(minDisparity, numDisparities, blockSize, P1, P2,
-                                                            disp12MaxDiff, preFilterCap, uniquenessRatio, sWS, speckleRange, cv::StereoSGBM::MODE_SGBM_3WAY);
-
     cv::Mat imageMat = [self UIImageToCVMat:image];
     int h = imageMat.rows, w = imageMat.cols;
     // 歪み除去
-    imageMat = [self undistortion:imageMat mtx:param.mtx dist:param.dist h:h w:w];
+    cv::Mat undistortedMat = [self undistortion:imageMat mtx:param.mtx dist:param.dist h:h w:w];
 
-    return [self CVMatToUIImage:imageMat];
+    UIImage *undistortedImage = [self CVMatToUIImage:undistortedMat];
+    return undistortedImage;
 }
 
 + (UIImage *)generateDisparityMapFromLeftImage:(UIImage *)leftImage rightImage:(UIImage *)rightImage {
@@ -122,7 +109,7 @@
     CGContextRelease(context);
 
     // cv::Matオブジェクトを作成
-    cv::Mat mat = cv::Mat(height, width, CV_8UC4, rawData);
+    cv::Mat mat = cv::Mat(height, width, CV_8UC4, rawData).clone();
 
     // メモリを解放
     free(rawData);
