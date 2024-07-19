@@ -156,7 +156,7 @@
     return image;
 }
 
-+ (UIImage *)detectAndDrawKeypointsInImage:(UIImage *)image usingAKAZE:(BOOL)useAKAZE {
++ (UIImage *)detectAndDrawKeypointsInImage:(UIImage *)image {
     cv::Mat img = [self UIImageToCVMat:image];
 
     // Convert to grayscale
@@ -164,12 +164,7 @@
     cv::cvtColor(img, gray, cv::COLOR_RGBA2GRAY);
 
     // Feature detector configuration
-    cv::Ptr<cv::Feature2D> detector;
-    if (useAKAZE) {
-        detector = cv::AKAZE::create();
-    } else {
-//        detector = cv::SIFT::create();
-    }
+    cv::Ptr<cv::Feature2D> detector = cv::AKAZE::create();;
 
     // Detect keypoints
     std::vector<cv::KeyPoint> keypoints;
@@ -186,7 +181,7 @@
 }
 
 /// 特徴点マッチング
-+ (UIImage *)matchFeaturesBetweenImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE {
++ (UIImage *)matchFeaturesBetweenImage:(UIImage *)image1 andImage:(UIImage *)image2 {
     cv::Mat img1 = [self UIImageToCVMat:image1];
     cv::Mat img2 = [self UIImageToCVMat:image2];
 
@@ -220,7 +215,7 @@
     return [self CVMatToUIImage:imgMatches];
 }
 
-+ (UIImage *)transformImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE {
++ (UIImage *)transformImage:(UIImage *)image1 andImage:(UIImage *)image2 {
     cv::Mat img1 = [self UIImageToCVMat:image1];
     cv::Mat img2 = [self UIImageToCVMat:image2];
 

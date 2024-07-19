@@ -338,7 +338,7 @@ class ViewController: UIViewController {
             // 2つの画像を同じ倍率に変更する
             // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
             guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
-            guard let hoge = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], andImage: adjustedImages[1], usingAKAZE: true) else { return }
+            guard let hoge = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], andImage: adjustedImages[1]) else { return }
             showPhotoPreviewModal(image: hoge,
                                   firstImage: adjustedImages[0],
                                   secondImage: adjustedImages[1])
@@ -529,7 +529,7 @@ extension ViewController {
         scaledImage.draw(in: CGRect(origin: .zero, size: resizedSize))
         guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
 
-        return [longFocalImage, resizedImage]
+        return [resizedImage, longFocalImage]
     }
 
 }
