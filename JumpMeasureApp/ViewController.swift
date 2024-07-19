@@ -330,11 +330,12 @@ class ViewController: UIViewController {
 
         $ciImages.sink { [weak self] images in
             guard let self, images.count >= 2 else { return }
+            // キャリブレーション前の画像を保存しておく
+            self.saveImageToPhotosAlbum(images[0].toUIImage(orientation: .up)!)
+            self.saveImageToPhotosAlbum(images[1].toUIImage(orientation: .up)!)
             // 画像のキャリブレーションを行う
             let (images, scaleFactor) = calibrateImages(images: images, mode: cameraMode)
             guard let images else { return }
-            self.saveImageToPhotosAlbum(images[0])
-            self.saveImageToPhotosAlbum(images[1])
             // 2つの画像を同じ倍率に変更する
             // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
             guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
@@ -342,7 +343,6 @@ class ViewController: UIViewController {
             showPhotoPreviewModal(image: hoge,
                                   firstImage: adjustedImages[0],
                                   secondImage: adjustedImages[1])
-            self.saveImageToPhotosAlbum(hoge)
         }.store(in: &cancellables)
     }
 
@@ -414,13 +414,15 @@ class ViewController: UIViewController {
 extension ViewController {
     private func showPhotoPreviewModal(image: UIImage, firstImage: UIImage, secondImage: UIImage) {
         let vc = ModalViewController(image: image, didTapConfirm: { [weak self] in
-//            self?.saveImageToPhotosAlbum(images[0])
-//            self?.saveImageToPhotosAlbum(images[1])
             let vc = DisparityMapViewController(
                 firstImage: firstImage,
                 secondImage: secondImage
             )
             self?.navigationController?.pushViewController(vc, animated: true)
+        }, didTapSave: { [weak self] in
+            self?.saveImageToPhotosAlbum(firstImage)
+            self?.saveImageToPhotosAlbum(secondImage)
+            self?.saveImageToPhotosAlbum(image)
         })
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]
