@@ -332,10 +332,15 @@ class ViewController: UIViewController {
             guard let self, images.count >= 2 else { return }
             // 画像のキャリブレーションを行う
             let (images, scaleFactor) = calibrateImages(images: images, mode: cameraMode)
+            guard let images else { return }
+            self.saveImageToPhotosAlbum(images[0])
+            self.saveImageToPhotosAlbum(images[1])
             // 2つの画像を同じ倍率に変更する
             // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
             guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
-            showPhotoPreviewModal(images: adjustedImages)
+            guard let hoge = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], andImage: adjustedImages[1], usingAKAZE: true) else { return }
+            showPhotoPreviewModal(image: hoge)
+            self.saveImageToPhotosAlbum(hoge)
         }.store(in: &cancellables)
     }
 
@@ -405,12 +410,12 @@ class ViewController: UIViewController {
 }
 
 extension ViewController {
-    private func showPhotoPreviewModal(images: [UIImage]) {
-        let vc = ModalViewController(images: images, didTapConfirm: { [weak self] in
+    private func showPhotoPreviewModal(image: UIImage) {
+        let vc = ModalViewController(image: image, didTapConfirm: { [weak self] in
 //            self?.saveImageToPhotosAlbum(images[0])
 //            self?.saveImageToPhotosAlbum(images[1])
-            let vc = DisparityMapViewController(images: images)
-            self?.navigationController?.pushViewController(vc, animated: true)
+//            let vc = DisparityMapViewController(image: image)
+//            self?.navigationController?.pushViewController(vc, animated: true)
         })
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]

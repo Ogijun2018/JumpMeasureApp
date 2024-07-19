@@ -17,6 +17,9 @@
 + (UIImage *)undistortionFromImage:(UIImage *)image
                         imageParam:(CalibrateParameter *)param;
 + (double)calculateDistanceFromDisparityMap:(UIImage *)disparityMap point1:(CGPoint)point1 point2:(CGPoint)point2 focalLength:(double)focalLength baseline:(double)baseline;
++ (UIImage *)detectAndDrawKeypointsInImage:(UIImage *)image usingAKAZE:(BOOL)useAKAZE;
++ (UIImage *)matchFeaturesBetweenImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE;
++ (UIImage *)transformImage:(UIImage *)image1 image2:(UIImage *)image2;
 
 @end
 

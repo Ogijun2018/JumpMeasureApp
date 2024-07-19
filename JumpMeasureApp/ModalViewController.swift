@@ -12,10 +12,7 @@ final class ModalViewController: UIViewController {
     private var didTapConfirm: (() -> Void)?
 
     private let imageContainerView = UIView()
-    private let leftImageContainerView = UIView()
-    private let rightImageContainerView = UIView()
-    private lazy var leftImageView = UIImageView()
-    private lazy var rightImageView = UIImageView()
+    private lazy var imageView = UIImageView()
 
     private let confirmButton: UIButton = {
         let button = UIButton()
@@ -43,7 +40,7 @@ final class ModalViewController: UIViewController {
     }()
 
     // 比較用の画像
-    let images: [UIImage]
+    let image: UIImage
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -63,7 +60,7 @@ final class ModalViewController: UIViewController {
     }
 
     private func configureViews() {
-        [imageContainerView, confirmButton, cancelButton, leftImageContainerView, rightImageContainerView, leftImageView, rightImageView].forEach {
+        [imageContainerView, confirmButton, cancelButton, imageView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
 
@@ -71,22 +68,12 @@ final class ModalViewController: UIViewController {
         [imageContainerView, confirmButton, cancelButton].forEach {
             view.addSubview($0)
         }
-        leftImageContainerView.addSubview(leftImageView)
-        rightImageContainerView.addSubview(rightImageView)
-        imageContainerView.addSubview(leftImageContainerView)
-        imageContainerView.addSubview(rightImageContainerView)
+        imageContainerView.addSubview(imageView)
+        imageContainerView.layer.masksToBounds = true
+        imageContainerView.layer.cornerRadius = 10
 
-        [leftImageContainerView, rightImageContainerView].forEach {
-            $0.layer.masksToBounds = true
-            $0.layer.cornerRadius = 10
-        }
-
-        leftImageView.contentMode = .scaleAspectFill
-        rightImageView.contentMode = .scaleAspectFill
-        leftImageView.image = images[0]
-        rightImageView.image = images[1]
-        print(images[0].size)
-        print(images[1].size)
+        imageView.contentMode = .scaleAspectFill
+        imageView.image = image
 
         // V:|[leftImageContainerView]|
         // V:|[rightImageContainerView]|
@@ -96,25 +83,10 @@ final class ModalViewController: UIViewController {
             imageContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 15),
             imageContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -15),
 
-            leftImageContainerView.topAnchor.constraint(equalTo: imageContainerView.topAnchor),
-            leftImageContainerView.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor),
-            leftImageContainerView.trailingAnchor.constraint(equalTo: imageContainerView.centerXAnchor, constant: -5),
-            leftImageContainerView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
-
-            rightImageContainerView.topAnchor.constraint(equalTo: imageContainerView.topAnchor),
-            rightImageContainerView.leadingAnchor.constraint(equalTo: imageContainerView.centerXAnchor, constant: 5),
-            rightImageContainerView.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor),
-            rightImageContainerView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
-
-            leftImageView.topAnchor.constraint(equalTo: leftImageContainerView.topAnchor),
-            leftImageView.leadingAnchor.constraint(equalTo: leftImageContainerView.leadingAnchor),
-            leftImageView.trailingAnchor.constraint(equalTo: leftImageContainerView.trailingAnchor),
-            leftImageView.bottomAnchor.constraint(equalTo: leftImageContainerView.bottomAnchor),
-
-            rightImageView.topAnchor.constraint(equalTo: rightImageContainerView.topAnchor),
-            rightImageView.leadingAnchor.constraint(equalTo: rightImageContainerView.leadingAnchor),
-            rightImageView.trailingAnchor.constraint(equalTo: rightImageContainerView.trailingAnchor),
-            rightImageView.bottomAnchor.constraint(equalTo: rightImageContainerView.bottomAnchor),
+            imageView.topAnchor.constraint(equalTo: imageContainerView.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
 
             confirmButton.topAnchor.constraint(equalTo: imageContainerView.bottomAnchor, constant: 20),
             confirmButton.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.5),
@@ -129,8 +101,8 @@ final class ModalViewController: UIViewController {
         ])
     }
 
-    init(images: [UIImage], didTapConfirm: (() -> Void)?) {
-        self.images = images
+    init(image: UIImage, didTapConfirm: (() -> Void)?) {
+        self.image = image
         self.didTapConfirm = didTapConfirm
         super.init(nibName: nil, bundle: nil)
     }

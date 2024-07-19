@@ -156,4 +156,131 @@
     return image;
 }
 
++ (UIImage *)detectAndDrawKeypointsInImage:(UIImage *)image usingAKAZE:(BOOL)useAKAZE {
+    cv::Mat img = [self UIImageToCVMat:image];
+
+    // Convert to grayscale
+    cv::Mat gray;
+    cv::cvtColor(img, gray, cv::COLOR_RGBA2GRAY);
+
+    // Feature detector configuration
+    cv::Ptr<cv::Feature2D> detector;
+    if (useAKAZE) {
+        detector = cv::AKAZE::create();
+    } else {
+//        detector = cv::SIFT::create();
+    }
+
+    // Detect keypoints
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+    detector->detectAndCompute(gray, cv::noArray(), keypoints, descriptors);
+
+    // Draw keypoints
+    cv::Mat img_with_keypoints;
+    cv::drawKeypoints(img, keypoints, img_with_keypoints, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+    // Convert back to UIImage
+    UIImage *resultImage = [self CVMatToUIImage:img_with_keypoints];
+    return resultImage;
+}
+
++ (UIImage *)matchFeaturesBetweenImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE {
+    cv::Mat img1 = [self UIImageToCVMat:image1];
+    cv::Mat img2 = [self UIImageToCVMat:image2];
+
+    // Convert to grayscale
+    cv::Mat gray1, gray2;
+    cv::cvtColor(img1, gray1, cv::COLOR_RGBA2GRAY);
+    cv::cvtColor(img2, gray2, cv::COLOR_RGBA2GRAY);
+
+    // Feature detector and matcher
+    cv::Ptr<cv::Feature2D> detector= cv::AKAZE::create();
+    std::vector<cv::KeyPoint> keypoints1, keypoints2;
+    cv::Mat descriptors1, descriptors2;
+    detector->detectAndCompute(gray1, cv::noArray(), keypoints1, descriptors1);
+    detector->detectAndCompute(gray2, cv::noArray(), keypoints2, descriptors2);
+
+    // Matching descriptors
+    cv::BFMatcher matcher(cv::NORM_HAMMING, true);
+    std::vector<cv::DMatch> matches;
+    matcher.match(descriptors1, descriptors2, matches);
+
+    // Sort matches by score
+    std::sort(matches.begin(), matches.end(), [](const cv::DMatch &a, const cv::DMatch &b) {
+        return a.distance < b.distance;
+    });
+
+    // Draw top matches
+    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + round(matches.size() * 0.05));
+    cv::Mat imgMatches;
+    cv::drawMatches(img1, keypoints1, img2, keypoints2, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+    return [self CVMatToUIImage:imgMatches];
+}
+
++ (UIImage *)transformImage:(UIImage *)image1 andImage:(UIImage *)image2 usingAKAZE:(BOOL)useAKAZE {
+    cv::Mat img1 = [self UIImageToCVMat:image1];
+    cv::Mat img2 = [self UIImageToCVMat:image2];
+
+    // Convert to grayscale
+    cv::Mat gray1, gray2;
+    cv::cvtColor(img1, gray1, cv::COLOR_RGBA2GRAY);
+    cv::cvtColor(img2, gray2, cv::COLOR_RGBA2GRAY);
+
+    // Ensure images are in CV_8U for color mapping
+    gray1.convertTo(gray1, CV_8UC1);
+    gray2.convertTo(gray2, CV_8UC1);
+
+    // Feature detector and matcher
+    cv::Ptr<cv::Feature2D> detector = cv::AKAZE::create();
+    std::vector<cv::KeyPoint> keypoints1, keypoints2;
+    cv::Mat descriptors1, descriptors2;
+
+    detector->detectAndCompute(gray1, cv::noArray(), keypoints1, descriptors1);
+    detector->detectAndCompute(gray2, cv::noArray(), keypoints2, descriptors2);
+
+    // Matching descriptors using BFMatcher
+    cv::BFMatcher matcher(cv::NORM_HAMMING, true);
+    std::vector<cv::DMatch> matches;
+    matcher.match(descriptors1, descriptors2, matches);
+
+    // Sort matches by score
+    std::sort(matches.begin(), matches.end(), [](const cv::DMatch &a, const cv::DMatch &b) {
+        return a.distance < b.distance;
+    });
+
+    // Sort matches and select the best ones
+    std::vector<cv::DMatch> goodMatches(matches.begin(), matches.begin() + std::min((int)matches.size(), 50));
+
+    // Find homography
+    std::vector<cv::Point2f> srcPoints, dstPoints;
+    for (const auto& match : goodMatches) {
+        srcPoints.push_back(keypoints1[match.queryIdx].pt);
+        dstPoints.push_back(keypoints2[match.trainIdx].pt);
+    }
+    cv::Mat mask;
+    cv::Mat H = cv::findHomography(srcPoints, dstPoints, cv::RANSAC, 0.0, mask);
+
+    // Warp the second image
+    cv::Mat warpedImage;
+    cv::warpPerspective(img2, warpedImage, H, img1.size());
+    // Ensure warpedImage is in grayscale and then convert to CV_8UC1 if it's not already
+    if (warpedImage.channels() > 1) {
+        cv::cvtColor(warpedImage, warpedImage, cv::COLOR_BGR2GRAY);
+    }
+    warpedImage.convertTo(warpedImage, CV_8UC1);
+
+    // Convert to Jet and HSV color maps
+    cv::Mat img1Jet, warpedHSV;
+    cv::applyColorMap(gray1, img1Jet, cv::COLORMAP_JET);
+    cv::applyColorMap(warpedImage, warpedHSV, cv::COLORMAP_HSV);
+
+    // Combine images
+    cv::Mat combinedImage;
+    cv::addWeighted(img1Jet, 0.5, warpedHSV, 0.5, 0, combinedImage);
+
+    return [self CVMatToUIImage:combinedImage];
+}
+
 @end
