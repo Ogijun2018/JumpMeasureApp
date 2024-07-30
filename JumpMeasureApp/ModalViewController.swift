@@ -17,7 +17,7 @@ final class ModalViewController: UIViewController {
 
     private let confirmButton: UIButton = {
         let button = UIButton()
-        button.setTitle("計測する", for: .normal)
+        button.setTitle("", for: .normal)
         button.backgroundColor = .systemBlue
         button.titleLabel?.font = .systemFont(ofSize: 22, weight: .semibold)
         button.layer.cornerRadius = 10
@@ -120,8 +120,12 @@ final class ModalViewController: UIViewController {
         ])
     }
 
-    init(image: UIImage, didTapConfirm: (() -> Void)?, didTapSave: (() -> Void)?) {
+    init(image: UIImage,
+         confirmButtonTitle: String,
+         didTapConfirm: (() -> Void)?,
+         didTapSave: (() -> Void)?) {
         self.image = image
+        self.confirmButton.setTitle(confirmButtonTitle, for: .normal)
         self.didTapConfirm = didTapConfirm
         self.didTapSave = didTapSave
         super.init(nibName: nil, bundle: nil)

@@ -6,10 +6,12 @@
 //
 
 import UIKit
+import Combine
 
 class DisparityMapViewController: UIViewController {
 
-    private var points: [CGPoint] = []
+    private var viewModel: DisparityMapViewModel
+    private var cancellables: [AnyCancellable] = []
 
     private var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
@@ -31,6 +33,7 @@ class DisparityMapViewController: UIViewController {
     init(shortFocalImage: UIImage, longFocalImage: UIImage) {
         self.shortFocalImage = shortFocalImage
         self.longFocalImage = longFocalImage
+        self.viewModel = .init()
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -78,28 +81,96 @@ class DisparityMapViewController: UIViewController {
             disparityImageView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
         ])
 
-        // TODO: 特徴点の抽出ができなかったときにアプリがクラッシュする
-        // 視差画像の生成
-//        let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_ :)))
+        scrollView.addGestureRecognizer(tap)
 
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(recognizer:)))
         doubleTap.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTap)
+        tap.require(toFail: doubleTap)
     }
 
-    private func bind() {}
+    private func bind() {
+        viewModel.$pointState.sink(receiveValue: { [weak self] state in
+            switch state {
+            case .zeroPoint:
+                self?.navigationItem.title = "1点目の計測点を選択してください"
+            case .onePoint:
+                self?.navigationItem.title = "2点目の計測点を選択してください"
+            case .twoPoint(let point1, let point2):
+                self?.drawLineBetweenPoints(points: (point1, point2))
+                self?.viewModel.openModal()
+            }
+        }).store(in: &cancellables)
+
+        viewModel.$route.sink(receiveValue: { [weak self] route in
+            guard let self, let route else { return }
+            switch route {
+            case .modal:
+                // 計測点の確認画面を開く
+                UIGraphicsBeginImageContextWithOptions(disparityImageView.bounds.size, false, 0.0)
+                disparityImageView.layer.render(in: UIGraphicsGetCurrentContext()!)
+                guard let image = UIGraphicsGetImageFromCurrentImageContext() else { return }
+                UIGraphicsEndImageContext()
+                let vc = ModalViewController(
+                    image: image,
+                    confirmButtonTitle: "計測する",
+                    didTapConfirm: {
+                        // TODO: 特徴点の抽出ができなかったときにアプリがクラッシュする
+                        // 視差画像の生成
+        //                let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+                    },
+                    didTapSave: nil
+                )
+                if let sheet = vc.sheetPresentationController {
+                    sheet.detents = [.large()]
+                    sheet.prefersEdgeAttachedInCompactHeight = true
+                }
+                present(vc, animated: true, completion: { [weak self] in
+                    self?.clearSublayers()
+                    self?.viewModel.closeModal()
+                })
+            case .back: 
+                break
+            }
+        }).store(in: &cancellables)
+    }
 
     // MARK: - GestureRecognizer
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         let location = gesture.location(in: disparityImageView)
+        addCircle(at: location)
+        viewModel.didTapPoint(location: location)
+    }
 
-        if points.count < 2 {
-            points.append(location)
-        }
+    private func addCircle(at point: CGPoint) {
+        let circlePath = UIBezierPath(arcCenter: point,
+                                      radius: 5.0,
+                                      startAngle: 0,
+                                      endAngle: CGFloat(2 * Double.pi),
+                                      clockwise: true)
+        let circleLayer = CAShapeLayer()
+        circleLayer.path = circlePath.cgPath
+        circleLayer.fillColor = UIColor.red.cgColor
+        disparityImageView.layer.addSublayer(circleLayer)
+    }
 
-        // 2点が選ばれたら距離を計算
-        if points.count == 2 {
-            points.removeAll()
+    private func drawLineBetweenPoints(points: (CGPoint, CGPoint)) {
+        let path = UIBezierPath()
+        path.move(to: points.0)
+        path.addLine(to: points.1)
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.path = path.cgPath
+        shapeLayer.strokeColor = UIColor.red.cgColor
+        shapeLayer.lineWidth = 2.0
+        disparityImageView.layer.addSublayer(shapeLayer)
+    }
+
+    private func clearSublayers() {
+        if let sublayers = disparityImageView.layer.sublayers {
+            for layer in sublayers {
+                layer.removeFromSuperlayer()
+            }
         }
     }
 

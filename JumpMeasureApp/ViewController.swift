@@ -414,17 +414,22 @@ class ViewController: UIViewController {
 
 extension ViewController {
     private func showPhotoPreviewModal(image: UIImage, shortFocalImage: UIImage, longFocalImage: UIImage) {
-        let vc = ModalViewController(image: image, didTapConfirm: { [weak self] in
-            let vc = DisparityMapViewController(
-                shortFocalImage: shortFocalImage,
-                longFocalImage: longFocalImage
-            )
-            self?.navigationController?.pushViewController(vc, animated: true)
-        }, didTapSave: { [weak self] in
-            self?.saveImageToPhotosAlbum(shortFocalImage)
-            self?.saveImageToPhotosAlbum(longFocalImage)
-            self?.saveImageToPhotosAlbum(image)
-        })
+        let vc = ModalViewController(
+            image: image,
+            confirmButtonTitle: "計測点を指定する",
+            didTapConfirm: { [weak self] in
+                let vc = DisparityMapViewController(
+                    shortFocalImage: shortFocalImage,
+                    longFocalImage: longFocalImage
+                )
+                self?.navigationController?.pushViewController(vc, animated: true)
+            },
+            didTapSave: { [weak self] in
+                self?.saveImageToPhotosAlbum(shortFocalImage)
+                self?.saveImageToPhotosAlbum(longFocalImage)
+                self?.saveImageToPhotosAlbum(image)
+            }
+        )
         if let sheet = vc.sheetPresentationController {
             sheet.detents = [.large()]
             sheet.prefersEdgeAttachedInCompactHeight = true
