@@ -331,18 +331,19 @@ class ViewController: UIViewController {
         $ciImages.sink { [weak self] images in
             guard let self, images.count >= 2 else { return }
             // キャリブレーション前の画像を保存しておく
-            self.saveImageToPhotosAlbum(images[0].toUIImage(orientation: .up)!)
-            self.saveImageToPhotosAlbum(images[1].toUIImage(orientation: .up)!)
+//            self.saveImageToPhotosAlbum(images[0].toUIImage(orientation: .up)!)
+//            self.saveImageToPhotosAlbum(images[1].toUIImage(orientation: .up)!)
             // 画像のキャリブレーションを行う
             let (images, scaleFactor) = calibrateImages(images: images, mode: cameraMode)
-            guard let images else { return }
             // 2つの画像を同じ倍率に変更する
             // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
-            guard let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor) else { return }
-            guard let hoge = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], andImage: adjustedImages[1]) else { return }
-            showPhotoPreviewModal(image: hoge,
-                                  firstImage: adjustedImages[0],
-                                  secondImage: adjustedImages[1])
+            guard let images, let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor),
+                  // 特徴点ありの画像
+                  let matchFeaturesImage = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], 
+                                                                                    andImage: adjustedImages[1]) else { return }
+            showPhotoPreviewModal(image: matchFeaturesImage,
+                                  shortFocalImage: adjustedImages[0],
+                                  longFocalImage: adjustedImages[1])
         }.store(in: &cancellables)
     }
 
@@ -412,16 +413,16 @@ class ViewController: UIViewController {
 }
 
 extension ViewController {
-    private func showPhotoPreviewModal(image: UIImage, firstImage: UIImage, secondImage: UIImage) {
+    private func showPhotoPreviewModal(image: UIImage, shortFocalImage: UIImage, longFocalImage: UIImage) {
         let vc = ModalViewController(image: image, didTapConfirm: { [weak self] in
             let vc = DisparityMapViewController(
-                firstImage: firstImage,
-                secondImage: secondImage
+                shortFocalImage: shortFocalImage,
+                longFocalImage: longFocalImage
             )
             self?.navigationController?.pushViewController(vc, animated: true)
         }, didTapSave: { [weak self] in
-            self?.saveImageToPhotosAlbum(firstImage)
-            self?.saveImageToPhotosAlbum(secondImage)
+            self?.saveImageToPhotosAlbum(shortFocalImage)
+            self?.saveImageToPhotosAlbum(longFocalImage)
             self?.saveImageToPhotosAlbum(image)
         })
         if let sheet = vc.sheetPresentationController {
@@ -517,8 +518,8 @@ extension ViewController {
             width: shortFocalImage.size.width / scaleFactor,
             height: shortFocalImage.size.height / scaleFactor
         )
-        print(scaleFactor)
-        print(trimmingArea)
+//        print(scaleFactor)
+//        print(trimmingArea)
         guard let scaledImage = trimmingImage(shortFocalImage, trimmingArea: trimmingArea) else {
             return nil
         }

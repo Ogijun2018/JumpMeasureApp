@@ -9,59 +9,87 @@ import UIKit
 
 class DisparityMapViewController: UIViewController {
 
-    private let sampleLabel: UILabel = {
-        let label = UILabel()
-        label.text = ""
-        label.font = .systemFont(ofSize: 30, weight: .semibold)
-        label.textColor = .white
-        return label
-    }()
-
     private var points: [CGPoint] = []
 
+    private var scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 5.0
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+        return scrollView
+    }()
     private let disparityImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.isUserInteractionEnabled = true
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
-    private let firstImage: UIImage
-    private let secondImage: UIImage
+    private let shortFocalImage: UIImage
+    private let longFocalImage: UIImage
+
+    init(shortFocalImage: UIImage, longFocalImage: UIImage) {
+        self.shortFocalImage = shortFocalImage
+        self.longFocalImage = longFocalImage
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        navigationItem.title = "1点目の計測点を選択してください"
+        scrollView.delegate = self
         configureViews()
         bind()
     }
 
-    private func configureViews() {
-        [disparityImageView, sampleLabel].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview($0)
-        }
-
-        [sampleLabel, disparityImageView].forEach {
-            NSLayoutConstraint.activate([
-                $0.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-                $0.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-                $0.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-                $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-            ])
-        }
-
-        // 視差画像の生成
-        let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
         // 二点間の距離を選択するときは歪みの少ない焦点距離の長い方を採用する
-        disparityImageView.image = secondImage
-
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
-        disparityImageView.addGestureRecognizer(tapGesture)
-
-        sampleLabel.textColor = .black
-        sampleLabel.textAlignment = .center
+        let scaledSize = scrollView.frame.size
+        let scaledImage = UIGraphicsImageRenderer(size: scaledSize).image { _ in
+            longFocalImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+        }
+        disparityImageView.image = scaledImage
     }
 
+    // MARK: - viewDidLoad private func
+    private func configureViews() {
+        view.backgroundColor = .white
+
+        [scrollView, disparityImageView].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+        }
+
+        view.addSubview(scrollView)
+        scrollView.addSubview(disparityImageView)
+
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            disparityImageView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            disparityImageView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            disparityImageView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            disparityImageView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
+        ])
+
+        // TODO: 特徴点の抽出ができなかったときにアプリがクラッシュする
+        // 視差画像の生成
+//        let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(recognizer:)))
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+    }
+
+    private func bind() {}
+
+    // MARK: - GestureRecognizer
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         let location = gesture.location(in: disparityImageView)
 
@@ -71,23 +99,22 @@ class DisparityMapViewController: UIViewController {
 
         // 2点が選ばれたら距離を計算
         if points.count == 2 {
-            sampleLabel.text = "Distance: 1"
             points.removeAll()
         }
     }
 
-    private func bind() {
-
+    @objc func handleDoubleTap(recognizer: UITapGestureRecognizer) {
+        switch scrollView.zoomScale {
+        case scrollView.minimumZoomScale:
+            scrollView.setZoomScale(scrollView.maximumZoomScale, animated: true)
+        default:
+            scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+        }
     }
+}
 
-    init(firstImage: UIImage, secondImage: UIImage) {
-        self.firstImage = firstImage
-        self.secondImage = secondImage
-        super.init(nibName: nil, bundle: nil)
-
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+extension DisparityMapViewController: UIScrollViewDelegate {
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return disparityImageView
     }
 }
