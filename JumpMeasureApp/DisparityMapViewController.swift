@@ -13,6 +13,19 @@ class DisparityMapViewController: UIViewController {
     private var viewModel: DisparityMapViewModel
     private var cancellables: [AnyCancellable] = []
 
+    private let loadingIndicatorView: UIActivityIndicatorView = {
+        let loading = UIActivityIndicatorView()
+        loading.style = .large
+        loading.color = .white
+
+        return loading
+    }()
+    private let loadingBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .lightGray
+        return view
+    }()
+
     private var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.minimumZoomScale = 1.0
@@ -43,7 +56,6 @@ class DisparityMapViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "1点目の計測点を選択してください"
         scrollView.delegate = self
         configureViews()
         bind()
@@ -63,18 +75,25 @@ class DisparityMapViewController: UIViewController {
     private func configureViews() {
         view.backgroundColor = .white
 
-        [scrollView, disparityImageView].forEach {
+        [scrollView, disparityImageView, loadingIndicatorView, loadingBackgroundView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
 
         view.addSubview(scrollView)
+        view.addSubview(loadingBackgroundView)
+        view.addSubview(loadingIndicatorView)
         scrollView.addSubview(disparityImageView)
 
+        [scrollView, loadingBackgroundView, loadingIndicatorView].forEach {
+            NSLayoutConstraint.activate([
+                $0.topAnchor.constraint(equalTo: view.topAnchor),
+                $0.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                $0.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                $0.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            ])
+        }
+
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             disparityImageView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             disparityImageView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             disparityImageView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
@@ -103,9 +122,11 @@ class DisparityMapViewController: UIViewController {
             }
         }).store(in: &cancellables)
 
-        viewModel.$route.sink(receiveValue: { [weak self] route in
-            guard let self, let route else { return }
-            switch route {
+        viewModel.$viewState.sink(receiveValue: { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .image:
+                stopLoading()
             case .modal:
                 // 計測点の確認画面を開く
                 UIGraphicsBeginImageContextWithOptions(disparityImageView.bounds.size, false, 0.0)
@@ -115,12 +136,12 @@ class DisparityMapViewController: UIViewController {
                 let vc = ModalViewController(
                     image: image,
                     confirmButtonTitle: "計測する",
-                    didTapConfirm: {
-                        // TODO: 特徴点の抽出ができなかったときにアプリがクラッシュする
-                        // 視差画像の生成
-        //                let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+                    didTapConfirm: { [weak self] in
+                        self?.viewModel.didTapConfirm()
                     },
-                    didTapSave: nil
+                    didTapSave: { [weak self] in
+                        self?.viewModel.didTapSave()
+                    }
                 )
                 if let sheet = vc.sheetPresentationController {
                     sheet.detents = [.large()]
@@ -130,10 +151,29 @@ class DisparityMapViewController: UIViewController {
                     self?.clearSublayers()
                     self?.viewModel.closeModal()
                 })
-            case .back: 
-                break
+            case .loading:
+                startLoading()
+                navigationItem.title = "計測中"
+            case .alert(let content):
+                // TODO: アラート
+                viewModel.closeModal()
             }
         }).store(in: &cancellables)
+    }
+
+    private func startLoading() {
+        loadingIndicatorView.startAnimating()
+        loadingBackgroundView.alpha = 0.0
+        UIView.animate(withDuration: 0.2) {
+            self.loadingBackgroundView.alpha = 1.0
+        }
+    }
+    private func stopLoading() {
+        loadingIndicatorView.stopAnimating()
+        loadingBackgroundView.alpha = 1.0
+        UIView.animate(withDuration: 0.2) {
+            self.loadingBackgroundView.alpha = 0.0
+        }
     }
 
     // MARK: - GestureRecognizer

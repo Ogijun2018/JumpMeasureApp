@@ -10,7 +10,7 @@ import UIKit
 final class DisparityMapViewModel {
     private var points: [CGPoint] = []
     @Published var pointState: State = .zeroPoint
-    @Published var route: Route?
+    @Published var viewState: ViewState = .image
 
     enum State {
         case zeroPoint
@@ -18,9 +18,15 @@ final class DisparityMapViewModel {
         case twoPoint(CGPoint, CGPoint)
     }
 
-    enum Route {
+    enum ViewState {
+        /// 計測点を選択する画面
+        case image
+        /// 2点の選択が完了し計測するボタンがある画面
         case modal
-        case back
+        /// ローディング
+        case loading
+        /// アラート
+        case alert(String)
     }
 
     // MARK: - Public func
@@ -36,13 +42,37 @@ final class DisparityMapViewModel {
         }
     }
 
+    // モーダルの計測するボタン押下時のイベント
+    func didTapConfirm() {
+        viewState = .loading
+        // TODO: 特徴点の抽出ができなかったときにアプリがクラッシュする
+        // 視差画像の生成
+//                let disparityImage = ImageProcessor.transform(firstImage, andImage: secondImage)
+    }
+
+    func didTapSave() {
+        viewState = .alert("hogehoge")
+    }
+
+    func didTapOK() {
+        viewState = .image
+    }
+
     func openModal() {
-        route = .modal
+        viewState = .modal
     }
 
     func closeModal() {
-        route = nil
+        viewState = .image
         points.removeAll()
         pointState = .zeroPoint
+    }
+
+    func startLoading() {
+        viewState = .loading
+    }
+
+    func stopLoading() {
+        viewState = .image
     }
 }
