@@ -40,13 +40,12 @@ class DisparityMapViewController: UIViewController {
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
-    private let shortFocalImage: UIImage
-    private let longFocalImage: UIImage
 
     init(shortFocalImage: UIImage, longFocalImage: UIImage) {
-        self.shortFocalImage = shortFocalImage
-        self.longFocalImage = longFocalImage
-        self.viewModel = .init()
+        self.viewModel = .init(
+            shortFocalImage: shortFocalImage,
+            longFocalImage: longFocalImage
+        )
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -63,12 +62,7 @@ class DisparityMapViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // 二点間の距離を選択するときは歪みの少ない焦点距離の長い方を採用する
-        let scaledSize = scrollView.frame.size
-        let scaledImage = UIGraphicsImageRenderer(size: scaledSize).image { _ in
-            longFocalImage.draw(in: CGRect(origin: .zero, size: scaledSize))
-        }
-        disparityImageView.image = scaledImage
+        disparityImageView.image = viewModel.getDisplayImage(scaledSize: scrollView.frame.size)
     }
 
     // MARK: - viewDidLoad private func
@@ -154,9 +148,12 @@ class DisparityMapViewController: UIViewController {
             case .loading:
                 startLoading()
                 navigationItem.title = "計測中"
-            case .alert(let content):
+            case .alert(_):
                 // TODO: アラート
                 viewModel.closeModal()
+            case .result:
+                // TODO: 結果画面への遷移
+                break
             }
         }).store(in: &cancellables)
     }
