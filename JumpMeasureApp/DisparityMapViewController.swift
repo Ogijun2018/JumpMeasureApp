@@ -62,7 +62,7 @@ class DisparityMapViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        disparityImageView.image = viewModel.getDisplayImage(scaledSize: scrollView.frame.size)
+        viewModel.viewDidLayoutSubviews(scaledSize: scrollView.frame.size)
     }
 
     // MARK: - viewDidLoad private func
@@ -104,6 +104,10 @@ class DisparityMapViewController: UIViewController {
     }
 
     private func bind() {
+        viewModel.$displayImage.sink(receiveValue: { [weak self] image in
+            self?.disparityImageView.image = image
+        }).store(in: &cancellables)
+
         viewModel.$pointState.sink(receiveValue: { [weak self] state in
             switch state {
             case .zeroPoint:
@@ -151,9 +155,9 @@ class DisparityMapViewController: UIViewController {
             case .alert(_):
                 // TODO: アラート
                 viewModel.closeModal()
-            case .result:
-                // TODO: 結果画面への遷移
-                break
+            case .result(let disparityImage):
+                let vc = ResultViewController(image: disparityImage)
+                navigationController?.pushViewController(vc, animated: true)
             }
         }).store(in: &cancellables)
     }

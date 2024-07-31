@@ -47,7 +47,7 @@
     return undistortedImage;
 }
 
-+ (UIImage *)generateDisparityMapFromLeftImage:(UIImage *)leftImage rightImage:(UIImage *)rightImage {
++ (UIImage *)generateDisparityMapBetweenImage:(UIImage *)leftImage andImage:(UIImage *)rightImage {
     cv::Mat leftMat = [self UIImageToCVMat:leftImage];
     cv::Mat rightMat = [self UIImageToCVMat:rightImage];
 
