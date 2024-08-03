@@ -26,7 +26,7 @@ class DisparityMapViewController: UIViewController {
         return view
     }()
 
-    private var scrollView: UIScrollView = {
+    private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.minimumZoomScale = 1.0
         scrollView.maximumZoomScale = 5.0
@@ -88,9 +88,8 @@ class DisparityMapViewController: UIViewController {
         }
 
         NSLayoutConstraint.activate([
+            disparityImageView.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
             disparityImageView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            disparityImageView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            disparityImageView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             disparityImageView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
         ])
 
@@ -105,7 +104,8 @@ class DisparityMapViewController: UIViewController {
 
     private func bind() {
         viewModel.$displayImage.sink(receiveValue: { [weak self] image in
-            self?.disparityImageView.image = image
+            guard let self, let image else { return }
+            self.disparityImageView.image = image
         }).store(in: &cancellables)
 
         viewModel.$pointState.sink(receiveValue: { [weak self] state in

@@ -56,16 +56,81 @@
         cv::resize(rightMat, rightMat, leftMat.size());
     }
 
-    cv::cvtColor(leftMat, leftMat, cv::COLOR_RGBA2GRAY);
-    cv::cvtColor(rightMat, rightMat, cv::COLOR_RGBA2GRAY);
+    cv::Mat thresh1, thresh2;
+    // leftMat/rightMatの画像領域の形をしたマスクを作成
+    cv::threshold(leftMat, thresh1, 1, 255, cv::THRESH_BINARY);
+    cv::threshold(rightMat, thresh2, 1, 255, cv::THRESH_BINARY);
+    // thresh1, thresh2を255倍
+    thresh1 = thresh1 * 255;
+    thresh2 = thresh2 * 255;
 
-    cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(16, 5);
-    cv::Mat disparity;
-    stereoSGBM->compute(leftMat, rightMat, disparity);
+    // 右画像の存在範囲領域の左右画像を抽出
+    cv::Mat trimmedImg1, trimmedImg2;
+    trimmedImg1 = leftMat.mul(thresh2, 1.0/255.0);
+    trimmedImg2 = rightMat.mul(thresh1, 1.0/255.0);
 
-    cv::normalize(disparity, disparity, 0, 255, cv::NORM_MINMAX, CV_8U);
+    // 加算して平均を取る
+    cv::Mat combined = (trimmedImg1 + trimmedImg2) / 2.0;
+    // MatからUIImageに変換
+    combined.convertTo(combined, CV_8U);  // 画像の範囲を適切に変換
 
-    return [self CVMatToUIImage:disparity];
+//    cv::cvtColor(leftMat, leftMat, cv::COLOR_RGBA2GRAY);
+//    cv::cvtColor(rightMat, rightMat, cv::COLOR_RGBA2GRAY);
+
+//    // SGBM 関数のパラメータを定義
+//    int minDisparity = 0;
+//    int numDisparities = 96;
+//    int blockSize = 3;
+//    int disp12MaxDiff = -1;
+//    int preFilterCap = 0;
+//    int uniquenessRatio = 15;
+//    int speckleWindowSize = 10;
+//    int speckleRange = 2;
+//    int P1 = 8 * 3 * blockSize * blockSize;
+//    int P2 = 32 * 3 * blockSize * blockSize;
+//
+//    cv::Ptr<cv::StereoSGBM> stereoSGBM = cv::StereoSGBM::create(minDisparity, numDisparities, blockSize, P1, P2,
+//        disp12MaxDiff, preFilterCap, uniquenessRatio,
+//        speckleWindowSize, speckleRange, cv::StereoSGBM::MODE_SGBM_3WAY);
+//
+//    cv::Mat disparity;
+//    stereoSGBM->compute(trimmedImg1, trimmedImg2, disparity);
+//    disparity.convertTo(disparity, CV_32F, 1.0 / 16.0);
+
+     // 左右画像の重複領域以外の領域の視差を NaN に置換
+//    cv::Mat disparityMap = cv::Mat::zeros(disparity.size(), disparity.type());
+//    for (int i = 0; i < disparity.rows; i++) {
+//        for (int j = 0; j < disparity.cols; j++) {
+//            if (thresh1.at<uchar>(i, j) == 1 && thresh2.at<uchar>(i, j) == 1) {
+//                disparityMap.at<float>(i, j) = disparity.at<float>(i, j);
+//            } else {
+//                disparityMap.at<float>(i, j) = NAN;
+//            }
+//        }
+//    }
+//
+//    // 無意味な最低視差値を NaN に置換
+//    for (int i = 0; i < disparityMap.rows; i++) {
+//        for (int j = 0; j < disparityMap.cols; j++) {
+//            if (disparityMap.at<float>(i, j) <= minDisparity) {
+//                disparityMap.at<float>(i, j) = NAN;
+//            }
+//        }
+//    }
+
+    // 視差マップの最小値と最大値を求める
+//    double minVal, maxVal;
+//    minMaxLoc(disparity, &minVal, &maxVal, nullptr, nullptr, cv::noArray());
+//
+//    // 視差マップをカラーマップに変換
+//    cv::Mat disparityColorMap;
+//    cv::Mat validDisparityMap = disparity.clone();
+//    validDisparityMap.setTo(minVal, disparity != disparity); // NaNを最小値に設定
+//    validDisparityMap.convertTo(disparityColorMap, CV_8U, 255.0 / (maxVal - minVal), -255.0 * minVal / (maxVal - minVal));
+//    applyColorMap(disparityColorMap, disparityColorMap, cv::COLORMAP_JET);
+
+    // MatからUIImageに変換して返却
+    return [self CVMatToUIImage:combined];
 }
 
 + (double)calculateDistanceFromDisparityMap:(UIImage *)disparityMap point1:(CGPoint)point1 point2:(CGPoint)point2 focalLength:(double)focalLength baseline:(double)baseline {

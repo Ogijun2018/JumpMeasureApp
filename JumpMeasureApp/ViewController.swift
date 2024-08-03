@@ -519,12 +519,10 @@ extension ViewController {
         // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
         let trimmingArea = CGRect(
             x: shortFocalImage.centerX - shortFocalImage.size.width / scaleFactor / 2,
-            y: shortFocalImage.centerY - shortFocalImage.size.height / scaleFactor / 2 - 30,
+            y: shortFocalImage.centerY - shortFocalImage.size.height / scaleFactor / 2,
             width: shortFocalImage.size.width / scaleFactor,
             height: shortFocalImage.size.height / scaleFactor
         )
-//        print(scaleFactor)
-//        print(trimmingArea)
         guard let scaledImage = trimmingImage(shortFocalImage, trimmingArea: trimmingArea) else {
             return nil
         }

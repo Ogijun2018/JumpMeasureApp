@@ -44,10 +44,13 @@ final class DisparityMapViewModel {
 
     // MARK: - Public func
     func viewDidLayoutSubviews(scaledSize: CGSize) {
+        // 高さはscrollViewと同じ、幅は画像のアスペクト比に従う
+        let imageAspectRatio = longFocalImage.size.width / longFocalImage.size.height
+        let imageSize = CGSize(width: scaledSize.height * imageAspectRatio, height: scaledSize.height)
         // 指定されたサイズに収まるように画像のサイズを変更する
         // 二点間の距離を選択するときは歪みの少ない焦点距離の長い方を採用する
-        let scaledImage = UIGraphicsImageRenderer(size: scaledSize).image { _ in
-            longFocalImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+        let scaledImage = UIGraphicsImageRenderer(size: imageSize).image { _ in
+            longFocalImage.draw(in: CGRect(origin: .zero, size: imageSize))
         }
         displayImage = scaledImage
     }
