@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  MainViewController.swift
 //  JumpMeasureApp
 //
 //  Created by Jun Ogino on 2024/07/10.
@@ -8,9 +8,11 @@
 import UIKit
 import AVFoundation
 import Combine
-import MobileCoreServices
 
-class ViewController: UIViewController {
+class MainViewController: UIViewController {
+
+    private let viewModel = MainViewModel()
+
     private let backTelephotoCameraPreviewLayer = AVCaptureVideoPreviewLayer()
     private let backCameraPreviewLayer = AVCaptureVideoPreviewLayer()
     private let backUltraWideCameraPreviewLayer = AVCaptureVideoPreviewLayer()
@@ -55,7 +57,6 @@ class ViewController: UIViewController {
 
         return button
     }()
-    let shutterButtonSize = CGFloat(80)
 
     let stackView: UIStackView = {
         let view = UIStackView()
@@ -70,21 +71,14 @@ class ViewController: UIViewController {
         button.tintColor = .white
         return button
     }()
-    
-    enum CameraMode {
-        case teleWide
-        case wideUltraWide
-    }
 
     enum Const {
         static let subViewEdgeInset: CGFloat = 20
+        static let shutterButtonSize: CGFloat = 80
     }
 
-    @Published var cameraMode: CameraMode = .teleWide
     private lazy var teleWideButton: UIButton = makeButton(title: "Wide / Telephoto")
     private lazy var wideUltraWideButton: UIButton = makeButton(title: "Wide / UltraWide")
-
-    @Published var ciImages: [CIImage] = []
 
     func makeButton(title: String) -> UIButton {
         let button = UIButton()
@@ -100,19 +94,6 @@ class ViewController: UIViewController {
         button.layer.borderColor = UIColor.white.cgColor
         return button
     }
-
-    var isAuthorized: Bool {
-        get async {
-            let status = AVCaptureDevice.authorizationStatus(for: .video)
-            var isAuthorized = status == .authorized
-            if status == .notDetermined {
-                isAuthorized = await AVCaptureDevice.requestAccess(for: .video)
-            }
-            return isAuthorized
-        }
-    }
-
-    @Published var isLoading: Bool = true
 
     private func configureViews() {
         [cameraPreviewView,
@@ -131,17 +112,18 @@ class ViewController: UIViewController {
         // teleWideButton config
         teleWideButton.isHidden = true
         teleWideButton.addAction(.init { [weak self] _ in
-            self?.cameraMode = .teleWide
+            self?.viewModel.updateCameraMode(mode: .teleWide)
         }, for: .touchUpInside)
 
         //wideUltraWideButton config
         wideUltraWideButton.isHidden = true
         wideUltraWideButton.addAction(.init { [weak self] _ in
-            self?.cameraMode = .wideUltraWide
+            self?.viewModel.updateCameraMode(mode: .wideUltraWide)
         }, for: .touchUpInside)
 
-        calibrationButton.addAction(.init { [weak self] _ in
-            print("button tapped")
+        calibrationButton.addAction(.init { _ in
+            // TODO: アプリ内でキャリブレーションを行いカメラ行列を取得できるようにする
+            // seeAlso: https://qiita.com/koba_tomtom/items/8c7ff3ebcc77b29b465c
         }, for: .touchUpInside)
 
         [cameraPreviewView, 
@@ -158,8 +140,8 @@ class ViewController: UIViewController {
         // V: |-(>=0)-shutterButton(50)-100-|
         // H: |-(>=0)-shutterButton(50)-(>=0)-|
         NSLayoutConstraint.activate([
-            shutterButton.heightAnchor.constraint(equalToConstant: shutterButtonSize),
-            shutterButton.widthAnchor.constraint(equalToConstant: shutterButtonSize),
+            shutterButton.heightAnchor.constraint(equalToConstant: Const.shutterButtonSize),
+            shutterButton.widthAnchor.constraint(equalToConstant: Const.shutterButtonSize),
             shutterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
             shutterButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
@@ -169,6 +151,33 @@ class ViewController: UIViewController {
         shutterButton.addAction(.init { [weak self] _ in
             self?.shutterButtonTapped()
         }, for: .touchUpInside)
+    }
+
+    private func configureMultiCamSession() {
+        if let telephotoCamera = AVCaptureDevice.default(.builtInTelephotoCamera, for: .video, position: .back),
+           let input = try? AVCaptureDeviceInput(device: telephotoCamera) {
+            // 望遠カメラ使用可能
+            viewModel.teleWideButtonIsHidden = false
+            telephotoCameraInput = input
+            // 出力設定
+            telephotoCameraOutput = AVCapturePhotoOutput()
+        }
+
+        if let wideCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+           let input = try? AVCaptureDeviceInput(device: wideCamera) {
+            wideCameraInput = input
+            // 出力設定
+            wideCameraOutput = AVCapturePhotoOutput()
+        }
+
+        if let ultraWideCamera = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
+           let input = try? AVCaptureDeviceInput(device: ultraWideCamera) {
+            // 超広角カメラ使用可能
+            viewModel.wideUltraWideButtonIsHidden = false
+            ultraWideCameraInput = input
+            // 出力設定
+            ultraWideCameraOutput = AVCapturePhotoOutput()
+        }
     }
 
     override func viewWillLayoutSubviews() {
@@ -192,7 +201,7 @@ class ViewController: UIViewController {
         // 静止画として現在の映像を保存する
         let settings = AVCapturePhotoSettings()
         // 各モードに合わせたoutputからcaptureを行う
-        switch cameraMode {
+        switch viewModel.cameraMode {
         case .teleWide:
             telephotoCameraOutput?.capturePhoto(with: settings, delegate: self)
             wideCameraOutput?.capturePhoto(with: settings, delegate: self)
@@ -202,7 +211,7 @@ class ViewController: UIViewController {
         }
     }
 
-    private func configureCameraSession(mode: CameraMode) {
+    private func configureCameraSession(mode: MainViewModel.CameraMode) {
         let multiCamSession = AVCaptureMultiCamSession()
 
         // メインの画面に表示させるカメラ映像は倍率の高い方を採用する
@@ -302,7 +311,10 @@ class ViewController: UIViewController {
     }
 
     private func bind() {
-        $cameraMode.sink { [weak self] mode in
+
+        viewModel.$cameraMode
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] mode in
             guard let self else { return }
             switch mode {
             case .teleWide:
@@ -314,54 +326,43 @@ class ViewController: UIViewController {
                 self.teleWideButton.layer.borderWidth = 0
                 self.wideUltraWideButton.layer.borderWidth = 2
             }
-            Task {
+            configureMultiCamSession()
+            configureCameraSession(mode: mode)
+        }.store(in: &cancellables)
+
+        Publishers.CombineLatest(viewModel.$matchFeaturesImage, viewModel.$adjustedImages).sink { [weak self] matchFeaturesImage, adjustedImages in
+            guard let self, let matchFeaturesImage,
+                  let shortFocalImage = adjustedImages?[0],
+                  let longFocalImage = adjustedImages?[1] else { return }
+            showPhotoPreviewModal(image: matchFeaturesImage, shortFocalImage: shortFocalImage, longFocalImage: longFocalImage)
+        }.store(in: &cancellables)
+
+        viewModel.$isLoading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+            guard let self else { return }
+            if status {
                 self.startLoading()
-                try await self.sleepTask()
-                if await self.isAuthorized {
-                    self.configureMultiCamSession()
-                    self.configureCameraSession(mode: mode)
-                } else {
-                    print("権限がありません")
-                }
-                try await self.sleepTask()
+            } else {
                 self.stopLoading()
             }
         }.store(in: &cancellables)
 
-        $ciImages.sink { [weak self] images in
-            guard let self, images.count >= 2 else { return }
-            // キャリブレーション前の画像を保存しておく
-//            self.saveImageToPhotosAlbum(images[0].toUIImage(orientation: .up)!)
-//            self.saveImageToPhotosAlbum(images[1].toUIImage(orientation: .up)!)
-            // 画像のキャリブレーションを行う
-            let (images, scaleFactor) = calibrateImages(images: images, mode: cameraMode)
-            // 2つの画像を同じ倍率に変更する
-            // calibrateImagesで返ってくるimagesは必ず1番目の焦点距離のほうが短い
-            guard let images, let adjustedImages = adjustImagesToSameScale(images: images, scaleFactor: scaleFactor),
-                  // 特徴点ありの画像
-                  let matchFeaturesImage = ImageProcessor.matchFeaturesBetweenImage(adjustedImages[0], 
-                                                                                    andImage: adjustedImages[1]) else { return }
-            showPhotoPreviewModal(image: matchFeaturesImage,
-                                  shortFocalImage: adjustedImages[0],
-                                  longFocalImage: adjustedImages[1])
+        viewModel.$teleWideButtonIsHidden.sink { [weak self] isHidden in
+            self?.teleWideButton.isHidden = isHidden
         }.store(in: &cancellables)
-    }
 
-    func sleepTask() async throws {
-        do {
-            try await Task.sleep(nanoseconds: 500_000_000) // wait for 0.5s
-        } catch {
-            print(error.localizedDescription)
-        }
+        viewModel.$wideUltraWideButtonIsHidden.sink { [weak self] isHidden in
+            self?.wideUltraWideButton.isHidden = isHidden
+        }.store(in: &cancellables)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         configureViews()
-        startLoading()
         bind()
-        stopLoading()
+        viewModel.updateCameraMode(mode: viewModel.cameraMode)
     }
 
     private func startLoading() {
@@ -380,39 +381,12 @@ class ViewController: UIViewController {
         }
     }
 
-    private func configureMultiCamSession() {
-        if let telephotoCamera = AVCaptureDevice.default(.builtInTelephotoCamera, for: .video, position: .back),
-           let input = try? AVCaptureDeviceInput(device: telephotoCamera) {
-            // 望遠カメラ使用可能
-            teleWideButton.isHidden = false
-            telephotoCameraInput = input
-            // 出力設定
-            telephotoCameraOutput = AVCapturePhotoOutput()
-        }
-
-        if let wideCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-           let input = try? AVCaptureDeviceInput(device: wideCamera) {
-            wideCameraInput = input
-            // 出力設定
-            wideCameraOutput = AVCapturePhotoOutput()
-        }
-
-        if let ultraWideCamera = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
-           let input = try? AVCaptureDeviceInput(device: ultraWideCamera) {
-            // 超広角カメラ使用可能
-            wideUltraWideButton.isHidden = false
-            ultraWideCameraInput = input
-            // 出力設定
-            ultraWideCameraOutput = AVCapturePhotoOutput()
-        }
-    }
-
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
 }
 
-extension ViewController {
+extension MainViewController {
     private func showPhotoPreviewModal(image: UIImage, shortFocalImage: UIImage, longFocalImage: UIImage) {
         let vc = ModalViewController(
             image: image,
@@ -425,9 +399,11 @@ extension ViewController {
                 self?.navigationController?.pushViewController(vc, animated: true)
             },
             didTapSave: { [weak self] in
-                self?.saveImageToPhotosAlbum(shortFocalImage)
-                self?.saveImageToPhotosAlbum(longFocalImage)
-                self?.saveImageToPhotosAlbum(image)
+                self?.viewModel.saveButtonDidTap(completion: { matchFeaturesImage, shortFocalImage, longFocalImage in
+                    self?.saveImageToPhotosAlbum(matchFeaturesImage)
+                    self?.saveImageToPhotosAlbum(shortFocalImage)
+                    self?.saveImageToPhotosAlbum(longFocalImage)
+                })
             }
         )
         if let sheet = vc.sheetPresentationController {
@@ -439,7 +415,7 @@ extension ViewController {
             // ciImagesは撮影のタイミングで2回appendされ、2枚になったときにモーダルを表示する
             // sink内でciImagesを削除すると、2回目のappendはguardによって発動せずciImagesに画像が1枚残ってしまう
             // モーダルのcompletionでciImagesを初期化することで確実に一回の撮影ごとにciImagesを削除している
-            self?.ciImages = []
+            self?.viewModel.removeCiImages()
         })
     }
 
@@ -454,101 +430,12 @@ extension ViewController {
             print("Successfully saved image to Photos album")
         }
     }
-
-    // MARK: - Utils private func
-    /// EXIFデータから35mm換算の焦点距離を取得
-    private func getFocalLength(from image: CIImage) -> CGFloat? {
-        guard let exifDict = image.properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
-              let focalLength = exifDict[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? CGFloat
-        else { return nil }
-        print("🚧 focalLength \(focalLength)")
-        return focalLength
-    }
-
-    private func trimmingImage(_ image: UIImage, trimmingArea: CGRect) -> UIImage? {
-        guard let croppedImage = image.cgImage?.cropping(to: trimmingArea) else {
-            return nil
-        }
-        return .init(cgImage: croppedImage, scale: image.scale, orientation: image.imageOrientation)
-    }
-
-    private func calibrateImages(images: [CIImage], mode: CameraMode) -> ([UIImage]?, CGFloat?){
-        guard let firstFocalLength = getFocalLength(from: images[0]),
-              let secondFocalLength = getFocalLength(from: images[1]),
-              let firstUIImage = images[0].toUIImage(orientation: .up),
-              let secondUIImage = images[1].toUIImage(orientation: .up) else {
-            return (nil, nil)
-        }
-
-        switch mode {
-        case .teleWide:
-            // 焦点距離が短い方が広角カメラ
-            if firstFocalLength <= secondFocalLength {
-                // firstUIImageが広角の場合
-                guard let wide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
-                      let telephoto = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.telephotoCameraParameter) else { return (nil, nil) }
-                return ([wide, telephoto], secondFocalLength/firstFocalLength)
-            } else {
-                // secondUIImageが広角の場合
-                guard let telephoto = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.telephotoCameraParameter),
-                      let wide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return (nil, nil) }
-                return ([wide, telephoto], firstFocalLength/secondFocalLength)
-            }
-        case .wideUltraWide:
-            // 焦点距離が短い方が超広角カメラ
-            if firstFocalLength <= secondFocalLength {
-                // firstUIImageが超広角の場合
-                guard let ultraWide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.ultraWideCameraParameter),
-                      let wide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.wideCameraParameter) else { return (nil, nil) }
-                return ([ultraWide, wide], secondFocalLength/firstFocalLength)
-            } else {
-                // secondUIImageが超広角の場合
-                guard let wide = ImageProcessor.undistortion(from: firstUIImage, imageParam: Constant.wideCameraParameter),
-                      let ultraWide = ImageProcessor.undistortion(from: secondUIImage, imageParam: Constant.ultraWideCameraParameter) else { return (nil, nil) }
-                return ([ultraWide, wide], firstFocalLength/secondFocalLength)
-            }
-        }
-    }
-
-    // 焦点距離の異なる二つの画像を同じ倍率に変更する
-    private func adjustImagesToSameScale(images: [UIImage]?, scaleFactor: CGFloat?) -> [UIImage]? {
-        guard let shortFocalImage = images?[0],
-              let longFocalImage = images?[1],
-              let scaleFactor else { return nil }
-
-        self.saveImageToPhotosAlbum(shortFocalImage)
-        self.saveImageToPhotosAlbum(longFocalImage)
-        let croppedWidth = shortFocalImage.size.width / scaleFactor
-        let croppedHeight = shortFocalImage.size.height / scaleFactor
-        print(shortFocalImage.size, croppedWidth, croppedHeight)
-        // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
-        let cropRect = CGRect(
-            x: (shortFocalImage.size.width - croppedWidth) / 2,
-            y: (shortFocalImage.size.height - croppedHeight) / 2,
-            width: croppedWidth,
-            height: croppedHeight
-        )
-
-        guard let croppedImage = shortFocalImage.cgImage?.cropping(to: cropRect) else { return nil }
-        let scaledImage = UIImage(cgImage: croppedImage, scale: shortFocalImage.scale, orientation: shortFocalImage.imageOrientation)
-
-        // 拡大した焦点距離の短い画像の画像サイズを焦点距離の長い画像の画像サイズに合わせる
-        // MEMO: resizedSizeをlongForcalImage.size.widthとするとscaledImageが 5760x3240 の画像になってしまった
-        // 1920x1080に合わせるため、1/3のCGSizeを指定している
-        let resizedSize = CGSize(width: longFocalImage.size.width/3, height: longFocalImage.size.height/3)
-        UIGraphicsBeginImageContextWithOptions(resizedSize, false, 0.0)
-        scaledImage.draw(in: CGRect(origin: .zero, size: resizedSize))
-        guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
-
-        return [resizedImage, longFocalImage]
-    }
-
 }
 
-extension ViewController: AVCapturePhotoCaptureDelegate {
+extension MainViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard let imageData = photo.fileDataRepresentation(),
               let ciImage = CIImage(data: imageData) else { return }
-        ciImages.append(ciImage)
+        viewModel.appendCiImage(image: ciImage)
     }
 }

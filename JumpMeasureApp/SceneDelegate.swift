@@ -18,7 +18,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // window生成
         let window = UIWindow(windowScene: scene)
         // ルートビュー指定
-        let vc = ViewController()
+        let vc = MainViewController()
         window.rootViewController = UINavigationController(rootViewController: vc)
         // キーウインドウ指定
         window.makeKeyAndVisible()
