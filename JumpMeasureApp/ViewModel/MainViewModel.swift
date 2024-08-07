@@ -147,15 +147,13 @@ class MainViewModel {
               let longFocalImage = images?[1],
               let scaleFactor else { return nil }
 
-//        self.saveImageToPhotosAlbum(shortFocalImage)
-//        self.saveImageToPhotosAlbum(longFocalImage)
-        let croppedWidth = shortFocalImage.size.width / scaleFactor
-        let croppedHeight = shortFocalImage.size.height / scaleFactor
+        let croppedWidth = shortFocalImage.size.width / (scaleFactor / 1.08)
+        let croppedHeight = shortFocalImage.size.height / (scaleFactor / 1.08)
         print(shortFocalImage.size, croppedWidth, croppedHeight)
         // 焦点距離の短い方を拡大し、焦点距離の長い方に合わせる
         let cropRect = CGRect(
-            x: (shortFocalImage.size.width - croppedWidth) / 2,
-            y: (shortFocalImage.size.height - croppedHeight) / 2,
+            x: (shortFocalImage.size.width - croppedWidth) / 2 - 110,
+            y: (shortFocalImage.size.height - croppedHeight) / 2 - 40,
             width: croppedWidth,
             height: croppedHeight
         )

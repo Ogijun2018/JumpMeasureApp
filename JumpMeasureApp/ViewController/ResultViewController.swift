@@ -11,25 +11,35 @@ class ResultViewController: UIViewController {
 
     private var imageView: UIImageView = {
         let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
         return imageView
     }()
     private var image: UIImage
 
-    private var containerStackView: UIStackView = {
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.backgroundColor = .black.withAlphaComponent(0.8)
-        stackView.distribution = .fillEqually
-        stackView.layoutMargins = .init(top: 0, left: 20, bottom: 0, right: 20)
-        stackView.isLayoutMarginsRelativeArrangement = true
-        return stackView
+//    private var containerStackView: UIStackView = {
+//        let stackView = UIStackView()
+//        stackView.axis = .vertical
+//        stackView.backgroundColor = .black.withAlphaComponent(0.8)
+//        stackView.distribution = .fillEqually
+//        stackView.layoutMargins = .init(top: 0, left: 20, bottom: 0, right: 20)
+//        stackView.isLayoutMarginsRelativeArrangement = true
+//        return stackView
+//    }()
+//    private var point1Label = makeLabel()
+//    private var point2Label = makeLabel()
+
+    private var containerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .gray.withAlphaComponent(0.5)
+        view.layer.cornerRadius = 20
+
+        return view
     }()
-    private var point1Label = makeLabel()
-    private var point2Label = makeLabel()
     private var distanceLabel = makeLabel()
 
     private static func makeLabel() -> UILabel {
         let label = UILabel()
+        label.font = .systemFont(ofSize: 30, weight: .semibold)
         label.textColor = .white
         return label
     }
@@ -45,33 +55,33 @@ class ResultViewController: UIViewController {
 
     private func configureViews() {
         imageView.image = image
-        view.addSubview(imageView)
-        view.addSubview(containerStackView)
-        [point1Label, point2Label, distanceLabel].forEach {
-            containerStackView.addArrangedSubview($0)
+
+        containerView.addSubview(distanceLabel)
+        [imageView, containerView].forEach {
+            view.addSubview($0)
         }
-        [imageView, containerStackView, point1Label, point2Label, distanceLabel].forEach {
+        [imageView, containerView, distanceLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
 
-        // H: |[imageView]|
-        // H: ||-20-[containerStackView](centerX)|
+        // H: |-[imageView]-|
+        // H: |-[distanceLabel]-|
         // V: |[imageView]|
-        // V: |(centerY)[containerStackView]||
+        // V: ||-20-[distanceLabel]
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            imageView.topAnchor.constraint(equalTo: view.topAnchor),
             imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            containerStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            containerStackView.topAnchor.constraint(equalTo: view.centerYAnchor),
-            containerStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            containerView.widthAnchor.constraint(equalToConstant: 250),
+            containerView.heightAnchor.constraint(equalToConstant: 100),
+            containerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            distanceLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            distanceLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
         ])
 
-        point1Label.text = "point1: 4.52342m"
-        point2Label.text = "point2: 3.53121m"
-        distanceLabel.text = "result: 6.45m"
+        distanceLabel.text = "result: 0.323m"
     }
 
     required init?(coder: NSCoder) {
